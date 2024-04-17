@@ -1,0 +1,11 @@
+../data/histone_feature/H3K20me1/H3K20me1_short_ncrna_matrix.csv
+../data/histone_feature/H3K23ac/H3K23ac_short_ncrna_matrix.csv
+../data/histone_feature/H3K27ac/H3K27ac_short_ncrna_matrix.csv
+../data/histone_feature/H3K36me3/H3K36me3_short_ncrna_matrix.csv
+../data/histone_feature/H3K4me1/H3K4me1_short_ncrna_matrix.csv
+../data/histone_feature/H3K4me3/H3K4me3_short_ncrna_matrix.csv
+../data/histone_feature/H3K79me1/H3K79me1_short_ncrna_matrix.csv
+../data/histone_feature/H3K79me2/H3K79me2_short_ncrna_matrix.csv
+../data/histone_feature/H3K9ac/H3K9ac_short_ncrna_matrix.csv
+../data/histone_feature/H3K9me3/H3K9me3_short_ncrna_matrix.csv
+../data/histone_feature/H4K4me2/H4K4me2_short_ncrna_matrix.csv
