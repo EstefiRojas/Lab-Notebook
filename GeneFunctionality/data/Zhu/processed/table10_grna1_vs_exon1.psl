@@ -1,0 +1,9 @@
+psLayout version 3
+
+match	mis- 	rep. 	N's	Q gap	Q gap	T gap	T gap	strand	Q        	Q   	Q    	Q  	T        	T   	T    	T  	block	blockSizes 	qStarts	 tStarts
+     	match	match	   	count	bases	count	bases	      	name     	size	start	end	name     	size	start	end	count
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+20	0	0	0	0	0	0	0	+	HOTAIR_HOTAIR	278138	122609	122629	ENSG00000256155.1/ENST00000535911.1_exon1	461	156	176	1	20,	122609,	156,
+21	0	0	0	0	0	0	0	+	HOTAIR_HOTAIR	278138	21230	21251	ENSG00000235947.1/ENST00000414938.1_exon1	644	617	638	1	21,	21230,	617,
+22	0	0	2	0	0	0	0	-	HOTAIR_HOTAIR	278138	148717	148741	ENSG00000253106.1/ENST00000518639.1_exon1	581	379	403	1	24,	129397,	379,
+15	0	0	6	0	0	0	0	-	HOTAIR_HOTAIR	278138	20510	20531	ENSG00000287979.1/ENST00000664186.1_exon1	1311	475	496	1	21,	257607,	475,
