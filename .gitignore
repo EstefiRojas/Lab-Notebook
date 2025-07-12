@@ -1,8 +1,29 @@
+# R specific
+.Rhistory
+.Rapp.history
+.RData
+.Ruserdata
+.Rproj.user/
+
+# macOS specific
 .DS_Store
 Thumbs.db
-.Spotlight-V100
-.Trashes
-__MACOSX
+-.Spotlight-V100
+-.Trashes
+-__MACOSX
+ 
+-# Ignore .bed files everywhere
+-#*.bed
 
-# Ignore .bed files everywhere
-#*.bed
+# Data and results
+/data/
+/results/
+
+# renv
+renv/library/
+renv/staging/
+renv/cellar/
+renv/sandbox/
+
+# secrets
+.env
