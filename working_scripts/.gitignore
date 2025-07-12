@@ -1,0 +1,22 @@
+# R specific
+.Rhistory
+.Rapp.history
+.RData
+.Ruserdata
+.Rproj.user/
+
+# macOS specific
+.DS_Store
+
+# Data and results
+/data/
+/results/
+
+# renv
+renv/library/
+renv/staging/
+renv/cellar/
+renv/sandbox/
+
+# secrets
+.env

@@ -1,0 +1,73 @@
+---
+title: "Analysis Workflow"
+date: "2025-07-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+This R Markdown document outlines the complete analysis pipeline. It loads data, performs calculations, runs various analyses, and generates plots.
+
+## Step 1: Load Configuration and Libraries
+
+This chunk loads the main configuration file and all required data loading functions.
+
+```{r load_config}
+# Load configuration
+source("scripts/config.R")
+
+# Load data loading functions
+source("scripts/load_gene_functionality_features.R")
+source("scripts/load_dinucleotide_features.R")
+source("scripts/load_epigenetic_features.R")
+source("scripts/load_gene_functionality_zscores.R")
+source("scripts/load_epigenetic_zscores.R")
+source("scripts/load_ks_stats_utils.R")
+```
+
+## Step 2: Load Data and Compute Z-Scores
+
+This chunk loads the feature matrices and computes the robust z-scores.
+
+```{r compute_zscores}
+# Load and compute z-scores
+feature_matrix <- load_gene_functionality_features()
+feature_matrix_epigenetic <- load_epigenetic_features()
+source("scripts/compute_robust_zscores.R")
+```
+
+## Step 3: Run Analysis Scripts
+
+This chunk executes the main analysis scripts, including distance effect, MDS, and PCA analysis.
+
+```{r run_analysis}
+# Run analysis scripts
+source("scripts/analize_distance_effect.R")
+source("scripts/mds_analisys.R")
+source("scripts/pca_analysis.R")
+```
+
+## Step 4: Generate Plots
+
+This chunk generates all the plots for the analysis, including heatmaps and violin plots.
+
+```{r generate_plots}
+# Generate plots
+source("scripts/generate_epigenetic_heatmap.R")
+source("scripts/generate_intrinsic_heatmap.R")
+source("scripts/generate_epigenetic_zscore_jitter_plots.R")
+source("scripts/generate_epigenetic_zscore_violin_plots.R")
+source("scripts/generate_gene_functionality_zscore_violin_plots.R")
+```
+
+## Conclusion
+
+The analysis pipeline has been completed successfully. The results can be found in the `results` directory.
+
+```{r completion_message}
+print("Analysis pipeline completed successfully!")
+```
