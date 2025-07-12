@@ -1,0 +1,146 @@
+###########################################################################################################################
+# EXTRACTING FEATURES
+###########################################################################################################################
+
+configfile: "config.yaml"
+all_rna=["functional-protein-exon2", "functional-protein-exon3", "functional-lncrna-exon1", "functional-lncrna-exon2", "functional-short-ncrna", "protein-exon2-negative-control", "protein-exon3-negative-control", "lncrna-exon1-negative-control", "lncrna-exon2-negative-control", "short-ncrna-negative-control"]
+rna_types=["protein-exon2", "protein-exon3", "lncrna-exon1", "lncrna-exon2", "short-ncrna"]
+
+rule all_features:
+    input:
+        expand("data/{sample}-dataset-features.csv", sample=all_rna)
+
+
+#############
+## GC content 
+#############
+rule run_intrinsic_seq_features:
+    input:
+        "data/{sample}-dataset.csv"
+    output:
+        "data/{sample}-GC.csv"
+    shell:
+        "scripts/intrinsic-seq-features.sh {input} > {output}"
+
+
+###############
+## Conservation 
+###############
+rule run_seq_conservation_features:
+    input:
+        initial_data="data/{sample}-dataset.csv",
+        bigWigSummary_exe=config["bigWigSummary_exe"],
+        phylo_bw=config["phylo_bw"], 
+        phast_bw=config["phast_bw"], 
+        zoonomia_phylo_bw=config["zoonomia_phylo_bw"], 
+        gerp_bw=config["gerp_bw"] 
+
+    output:
+        "data/conservation/{sample}-conservation.csv"
+    shell:
+        "scripts/seq-conservation-features.sh {input} > {output}"
+
+
+################
+## Transcriptome
+################
+rule run_transcriptome:
+    input:
+        "data/{sample}-dataset.csv", 
+        encode_folder=config["encode_folder"]
+
+    output:
+        "data/transcriptome/{sample}-transcriptome.csv"
+
+    shell:
+        "scripts/transcriptome-expression-features.sh {input} > {output}"
+
+
+##################        
+## Genomic repeats 
+##################
+rule run_genomic_repeat:
+    input:
+        initial_data="data/{sample}-dataset.csv",
+        initial_fasta="data/{sample}-seq.fa", 
+        human_genome_mmseqs=config["human_genome_mmseqs"],
+        dfam_hits=config["dfam_hits"]   
+
+    output:
+        "data/repeats/{sample}-repeats.csv"
+
+    shell:
+        "bin/genomic-repeat-associated-features.sh {input} > {output}"
+
+
+#######################        
+## Population variation
+#######################
+rule run_populatio_variation:
+    input:
+        initial_data="data/{sample}-dataset.csv",
+        initial_fasta="data/{sample}-seq.fa", 
+        chain_file=config["chain_file"], 
+        onekGP_directory=config["onekGP_directory"],
+        gnomad_directory=config["gnomad_directory"]
+
+    output:
+        "data/population/{sample}-variation.csv"
+
+    shell:
+        "bin/population-variation-features.sh {input} > {output}"
+
+
+###########################        
+## Protein and RNA specific 
+###########################
+rule run_protein_and_rna_specific_features:
+    input:
+        initial_data="data/{sample}-dataset.csv",
+        initial_fasta="data/{sample}-seq.fa",
+        interaction_database=config["interaction_database"],
+        access_file=config["access_file"],
+        cpc2_file=config["cpc2_file"],
+        bigBedToBed_exe=config["bigBedToBed_exe"]
+        
+        
+    output:
+        "data/specific/{sample}-specific.csv"
+       
+    shell:
+        "bin/protein-and-rna-specific-features.sh {input} > {output}"
+
+
+#### FINAL FEATURES DATASET #### 
+rule concatenate_features:
+    input:
+        "data/{sample}-dataset.csv",
+        "data/intrinsic/{sample}-GC.csv",
+        "data/conservation/{sample}-conservation.csv",
+        "data/transcriptome/{sample}-transcriptome.csv",
+        "data/repeats/{sample}-repeats.csv",
+        "data/specific/{sample}-specific.csv", 
+        "data/population/{sample}-variation.csv"
+
+    output:
+        "data/{sample}-dataset-features.csv"
+    shell:
+        "paste -d ',' {input} > {output}"
+
+
+## Join negative control with corresponding functional dataset ## 
+
+rule all_join_positive_negative:
+    input:
+        expand("data/{sample}-features.csv", sample=rna_types)
+      
+rule join_positive_negative:
+    input:
+        positive="data/*-{sample}-features.csv",
+        negative="data/{sample}-negative-control-features.csv"
+        
+    output:
+        "data/{sample}-features.csv"
+
+    shell:
+        "paste -d'\n' {input.positive}{input.negative} > {output}"

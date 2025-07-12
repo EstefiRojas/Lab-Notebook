@@ -27,3 +27,9 @@ renv/sandbox/
 
 # secrets
 .env
+
+# Large files that exceed GitHub limits
+*.zip
+**/old_files.zip
+**/EffectOnDistanceAll.zip
+**/zscores.zip
