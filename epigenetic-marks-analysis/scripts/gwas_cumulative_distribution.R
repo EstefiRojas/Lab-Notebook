@@ -248,6 +248,11 @@ lncrna_gwas_data_w$pval_label_with_count <- factor(lncrna_gwas_data_w$pval_label
   "<1e-300 (241)")
 )
 
+lncrna_gwas_data_w$pval_association_category <- factor(lncrna_gwas_data_w$pval_association_category, levels = c(
+  "NA", "1e-05 - 1e-10", "1e-11 - 1e-100", "1e-101 - 1e-300",
+  "<1e-300")
+)
+
 ggplot(lncrna_gwas_data_w, aes(x = highest_prob, color = pval_label_with_count)) +
   stat_ecdf(geom = "step", linewidth = 1.2) +
   scale_color_manual(
@@ -443,150 +448,72 @@ ggplot(plot_data, aes(x = neg_log10_p, y = highest_prob, colour = legend_label_f
 
 
 
+# Custom function to perform K-S test and format the D-statistic and p-value stars
+ks_test_custom <- function(x, y) {
+  test <- ks.test(x, y)
+  
+  # Convert p-value to significance stars
+  # 'cut' is a clean way to assign stars based on p-value ranges
+  stars <- cut(test$p.value, breaks = c(-Inf, 0.001, 0.01, 0.05, Inf),
+               labels = c("***", "**", "*", "ns"))
+  
+  # Format the label as: D-value (stars)
+  label <- paste0(format(test$statistic, digits = 2), " (", format(test$p.value, digits = 2), ")")
+  
+  # Return a list with the custom label for ggsignif
+  return(list(p.value = label))
+}
+
+# Define the pairwise comparisons to be performed
+#my_comparisons <- combn(essentiality_labels, 2, simplify = FALSE)
+my_comparisons <- list(c("NA","1e-05 - 1e-10"),
+                       c("NA","1e-11 - 1e-100"),
+                       c("NA","1e-101 - 1e-300"),
+                       c("NA","<1e-300"))
 
 # Create violin plots
-violin_plot <- ggplot(lncrna_gwas_data_w, aes(x = pval_label_with_count, y = highest_prob, fill = pval_label_with_count)) +
-  geom_violin(trim = FALSE) +
+violin_plot <- ggplot(lncrna_gwas_data_w, aes(x = pval_association_category, y = highest_prob, fill = pval_label_with_count)) +
+  geom_violin(scale="area", na.rm = TRUE, trim = FALSE, bounds = c(0,1)) +
   geom_boxplot(width = 0.1, fill = "white", alpha = 0.5) +
   scale_fill_brewer(palette = "Set2") +
   labs(
     title = "Functional probability distribution by GWAS minimum p-value",
     x = "GWAS SNP minimum p-value",
-    y = "Highest Probability"
+    y = "Highest Probability",
+    fill = "Minimum p-value" # Update legend title to match 'color'
   ) +
   theme_minimal() +
   theme(
-    text = element_text(size = 20),
-    legend.position = "none",
+    text = element_text(size = 28),
+    legend.position = "right",
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
-big_p_values <- lncrna_gwas_data_w%>%
-  filter(pval_association_category == "<1e-300")
 
-
-
-# k-s stat
-# function to calculate a custom K-S analysis to keep sign
-signed_ks_test <- function(x, y) {
-  # Sort data
-  x <- sort(x)
-  y <- sort(y)
-  
-  # Calculate empirical cumulative distribution functions (ECDF)
-  ecdf_x <- ecdf(x)
-  ecdf_y <- ecdf(y)
-  
-  # Get the unique values from both samples
-  unique_vals <- sort(unique(c(x, y)))
-  
-  # Calculate the raw differences between ECDFs
-  diffs <- ecdf_x(unique_vals) - ecdf_y(unique_vals)
-  
-  # Find the maximum difference (positive or negative)
-  max_diff <- max(diffs)
-  min_diff <- min(diffs)
-  
-  signed_D <- 0
-  if(max_diff > abs(min_diff)) {
-    signed_D <- max_diff
-  } else {
-    signed_D <- min_diff
-  }
-  
-  # Return the maximum and minimum differences
-  return(list(signed_D = signed_D, max_diff = max_diff, min_diff = min_diff))
-}
-
-# Function to perform K-S analysis
-run_ks_tests <- function(dataN, dataP, selected_features) {
-  n <- length(selected_features)
-  results <- matrix(nrow = 4, ncol = n)
-  colnames(results) <- selected_features
-  rownames(results) <- c("signed_D","max","min","p.val")
-  
-  for (i in selected_features) {
-    #positive_col <- remove_outliers_IQR(dataP, i)
-    #negative_col <- remove_outliers_IQR(dataN, i)
-    positive_col <- dataP[[i]]
-    negative_col <- dataN[[i]]
-    
-    ks_test <- signed_ks_test(negative_col, positive_col)
-    ks_test_p <- ks.test(negative_col, positive_col)
-    
-    results[1,i] <- ks_test$signed_D
-    results[2,i] <- ks_test$max_diff
-    results[3,i] <- ks_test$min_diff
-    results[4,i] <- ks_test_p$p.value
-  }
-  return(results)
-}
-
-
-###########################
-# P-val KS stat computation
-###########################
-# Compute KS between first and last bin
-max_assoc_bin1 <- lncrna_gwas_data_w |>
-  filter(pval_association_category=="NA")
-
-max_assoc_bin2 <- lncrna_gwas_data_w |>
-  filter(pval_association_category=="1e-05 - 1e-10")
-
-max_assoc_bin3 <- lncrna_gwas_data_w |>
-  filter(pval_association_category=="1e-11 - 1e-100")
-
-max_assoc_bin4 <- lncrna_gwas_data_w |>
-  filter(pval_association_category=="1e-101 - 1e-300")
-
-max_assoc_bin5 <- lncrna_gwas_data_w |>
-  filter(pval_association_category=="<1e-300")
-
-colnames(max_assoc_bin1)
-
-ks_results_bin1_5 <- run_ks_tests(max_assoc_bin1, 
-                                  max_assoc_bin5, 
-                                  c("highest_prob"))
-ks_results_bin1_4 <- run_ks_tests(max_assoc_bin1, 
-                                  max_assoc_bin4, 
-                                  c("highest_prob"))
-ks_results_bin1_3 <- run_ks_tests(max_assoc_bin1, 
-                                  max_assoc_bin3, 
-                                  c("highest_prob"))
-ks_results_bin1_2 <- run_ks_tests(max_assoc_bin1, 
-                                  max_assoc_bin2, 
-                                  c("highest_prob"))
-
-
-my_comparisons <- list(
-  c("NA", "1e-05 - 1e-10"), 
-  c("NA", "1e-11 - 1e-100"),
-  c("NA", "1e-101 - 1e-300"),
-  c("NA", "<1e-300")
-)
-
-my_p_values <- c(0.006974282, 8.292809e-32, 0.130527915, 1.555978e-05)
 
 violin_plot_with_pvals <- violin_plot +
   geom_signif(
     comparisons = my_comparisons,
-    annotations = formatC(my_p_values, digits = 2, format = "e"),  # Format p-values
-    y_position = c(1.2, 1.3, 1.4, 1.5),
+    test = "ks_test_custom",
+    step_increase = 0.2,
+    textsize = 6.5,
     tip_length = 0.01,
-    vjust = 0.2
+    y_position = 1.2
   ) +
-  ylim(0, 1.6)  # Adjust y-axis to make room for the annotations
+  # This prevents nonsensical axis ticks (e.g., > 1) while keeping room for annotations.
+  scale_y_continuous(breaks = seq(0, 1, 0.2)) +
+  coord_cartesian(ylim = c(0, 2.1), clip = "off") # Use coord_cartesian to "zoom" without clipping annotations
 
-violin_plot +
-  annotate("segment", x = 1, xend = 2, y = 1.2, yend = 1.2) +  # Line for NA to 1e-05 - 1e-10
-  annotate("text", x = 1.5, y = 1.25, label = "0.032 (**)") +   # Text for first p-value
-  annotate("segment", x = 1, xend = 3, y = 1.3, yend = 1.3) +  # Line for NA to 1e-11 - 1e-100
-  annotate("text", x = 2, y = 1.35, label = "0.129 (****)") +   # Text for second p-value
-  annotate("segment", x = 1, xend = 4, y = 1.4, yend = 1.4) +  # Line for NA to 1e-101 - 1e-300
-  annotate("text", x = 2.5, y = 1.45, label = "0.099 (-)") +   # Text for second p-value
-  annotate("segment", x = 1, xend = 5, y = 1.5, yend = 1.5) +  # Line for NA to <1e-300
-  annotate("text", x = 3, y = 1.55, label = "0.164 (****)") +   # Text for second p-value
-  # ... similar lines for other comparisons
-  ylim(-0.5, 1.6)
+#violin_plot +
+#  annotate("segment", x = 1, xend = 2, y = 1.2, yend = 1.2) +  # Line for NA to 1e-05 - 1e-10
+#  annotate("text", x = 1.5, y = 1.25, label = "0.032 (0.001)", size = 5) +   # Text for first p-value
+#  annotate("segment", x = 1, xend = 3, y = 1.3, yend = 1.3) +  # Line for NA to 1e-11 - 1e-100
+#  annotate("text", x = 2, y = 1.35, label = "0.129 (2.79e-35)", size = 5) +   # Text for second p-value
+#  annotate("segment", x = 1, xend = 4, y = 1.4, yend = 1.4) +  # Line for NA to 1e-101 - 1e-300
+#  annotate("text", x = 2.5, y = 1.45, label = "0.099 (0.110)", size = 5) +   # Text for second p-value
+#  annotate("segment", x = 1, xend = 5, y = 1.5, yend = 1.5) +  # Line for NA to <1e-300
+#  annotate("text", x = 3, y = 1.55, label = "0.164 (7.03e-06)", size = 5) +   # Text for second p-value
+#  scale_y_continuous(breaks = seq(0, 1, 0.2)) +
+#  coord_cartesian(ylim = c(0, 1.7), clip = "off") # Use coord_cartesian to "zoom" without clipping annotations
 
 violin_plot_with_pvals
 
