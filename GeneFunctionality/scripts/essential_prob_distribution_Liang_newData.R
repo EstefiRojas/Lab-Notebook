@@ -52,50 +52,7 @@ new_labels <- setNames(
 )
 
 
-
-
-
-# Generate the Violin Plot
-plot_violin <- ggplot(data = filtered_df,
-                      aes(x = Essential_Status, y = max_prob, fill = Essential_Status)) +
-  
-  # Add the violin layer
-  # trim = FALSE ensures the violin tails are drawn to the full range of the data
-  geom_violin(scale = "area", na.rm = TRUE, adjust = 1, trim = TRUE, bounds = c(0,1.1)) +
-
-  
-  # Add a box plot inside the violins
-  geom_boxplot(alpha=0.0, outliers=TRUE, na.rm = TRUE, position = position_dodge(width = 0.9), width=0.05) +
-  
-  # Use scale_fill_manual since we mapped the 'fill' aesthetic
-  scale_fill_manual(values = c("Cell-type specific" = "#1a53ff", "Shared" = "#b30000", "Partially shared" = "#87bc45", "Non-essential" = "#beb9db"),
-                    labels = new_labels) +
-  
-  #coord_cartesian(ylim = c(0, 1.05)) +  # Slight padding above 1
-  #scale_y_continuous(
-  #  breaks = seq(0, 1, 0.2),
-  #  limits = c(0, 1.05),
-  #  expand = c(0, 0)
-  #) +
-  
-  # Update the labels for the new plot layout
-  labs(
-    title = "Distribution of Functional Probability by Essentiality Group, Liang et.al 2024",
-    x = "Essentiality Group",
-    y = "Functional Probability",
-    fill = "Essentiality Group" # Update legend title to match 'fill'
-  ) +
-  
-  # Your custom theme remains the same
-  theme_minimal() +
-  theme(
-    text = element_text(size = 28), # Adjusted size for better readability
-    axis.text.x = element_text(angle = 45, hjust = 1), # Angle x-axis labels if they overlap
-    panel.grid.major = element_line(color = "gray90"),
-    panel.grid.minor = element_blank(), # Hiding minor grid lines for a cleaner look
-    legend.position = "right"
-  )
-
+# --- Generate the Violin Plot ---
 
 # Define the pairwise comparisons to be performed
 #my_comparisons <- combn(essentiality_labels, 2, simplify = FALSE)
@@ -118,27 +75,82 @@ ks_test_custom <- function(x, y) {
   return(list(p.value = label))
 }
 
-# Add the statistical comparison layer using the custom function
-plot_with_stats <- plot_violin +
+
+# 14 Jul 2025 #
+# The initial part of your script remains the same
+# We assume 'filtered_df', 'new_labels', 'my_comparisons',
+# and 'ks_test_custom' are already defined.
+
+# Start the ggplot object
+plot_modified <- ggplot(data = filtered_df,
+                        aes(x = Essential_Status, y = max_prob, 
+                            fill = Essential_Status, color = Essential_Status)) +
+  
+  # 1. Add violin and box plots for all groups EXCEPT 'Shared'
+  # We use the data argument to pass a subset of the original data frame
+  geom_violin(data = ~ subset(., Essential_Status != "Shared"),
+              scale = "area", na.rm = TRUE, trim = TRUE, bounds = c(0,1)) +
+  geom_boxplot(data = ~ subset(., Essential_Status != "Shared"),
+               width = 0.1, alpha = 0.5, na.rm = TRUE, outlier.shape = NA) +
+  
+  # 2. Add a jitter plot ONLY for the 'Shared' group
+  geom_jitter(data = ~ subset(., Essential_Status == "Shared"),
+              width = 0.25, size = 3, alpha = 0.8) +
+  
+  # Use scale_fill_manual since we mapped the 'fill' aesthetic
+  scale_fill_manual(values = c("Cell-type specific" = "#1a53ff", 
+                               "Shared" = "#b30000", 
+                               "Partially shared" = "#87bc45", 
+                               "Non-essential" = "#beb9db"),
+                    labels = new_labels) +
+  
+  scale_color_manual(values = c("Cell-type specific" = "black", 
+                                "Shared" = "#b30000", 
+                                "Partially shared" = "black", 
+                                "Non-essential" = "black"),
+                     guide = "none") +
+  
+  guides(fill = guide_legend(override.aes = list(shape = 21, size = 5))) +
+  
+  # Update the labels for the new plot layout
+  labs(
+    title = "Distribution of Functional Probability by Essentiality Group, Liang et.al 2024",
+    x = "Essentiality Group",
+    y = "Functional Probability",
+    fill = "Essentiality Group" # Update legend title to match 'fill'
+  ) +
+  
+  # Your custom theme remains the same
+  theme_minimal() +
+  theme(
+    text = element_text(size = 28),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid.major = element_line(color = "gray90"),
+    panel.grid.minor = element_blank(),
+    legend.position = "right"
+  )
+
+# Add the statistical comparison layer
+plot_with_stats <- plot_modified +
   geom_signif(
     comparisons = my_comparisons,
-    test = "ks_test_custom",  # Use our new custom function
-    step_increase = 0.2,      # Spacing can be reduced for single-line labels
+    test = "ks_test_custom",
+    step_increase = 0.2,
     textsize = 6.5,
     tip_length = 0.01,
-    y_position = 1.2      # Manually set the y-position for the first bracket
+    y_position = 1.2
   ) +
-  # Expand the y-axis slightly to make room for the highest comparison brackets
-  scale_y_continuous(expand = expansion(mult = c(0.05, 0.15)))
+  # KEY CHANGE: Set explicit breaks for the y-axis and use coord_cartesian to set the visual range.
+  # This prevents nonsensical axis ticks (e.g., > 1) while keeping room for annotations.
+  scale_y_continuous(breaks = seq(0, 1, 0.2)) +
+  coord_cartesian(ylim = c(0, 1.7), clip = "off") # Use coord_cartesian to "zoom" without clipping annotations
 
 
-# To display the final plot
+# Display the final plot
 print(plot_with_stats)
 
 
-
-
-# Generate the Jitter Plot
+# Generate a Jitter Plot
 plot_jitter <- ggplot(data = filtered_df,
                       aes(x = Essential_Status, y = max_prob, color = Essential_Status)) +
   
@@ -177,15 +189,16 @@ plot_jitter <- ggplot(data = filtered_df,
 plot_with_stats <- plot_jitter +
   geom_signif(
     comparisons = my_comparisons,
-    test = "ks_test_custom",  # Use our new custom function
-    step_increase = 0.12,     # Adjusted spacing for jitter plot
-    textsize = 6,
-    color = "black",
+    test = "ks_test_custom",
+    step_increase = 0.2,
+    textsize = 6.5,
     tip_length = 0.01,
-    y_position = 1.05       # Adjusted starting y-position for the first bracket
+    y_position = 1.2
   ) +
-  # Expand the y-axis slightly to make room for the highest comparison brackets
-  scale_y_continuous(expand = expansion(mult = c(0.05, 0.20)))
+  # KEY CHANGE: Set explicit breaks for the y-axis and use coord_cartesian to set the visual range.
+  # This prevents nonsensical axis ticks (e.g., > 1) while keeping room for annotations.
+  scale_y_continuous(breaks = seq(0, 1, 0.2)) +
+  coord_cartesian(ylim = c(0, 1.7), clip = "off") # Use coord_cartesian to "zoom" without clipping annotations
 
 
 # To display the final plot
