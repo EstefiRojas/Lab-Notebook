@@ -4,12 +4,13 @@ library(dplyr)
 library(ggpubr)
 library(MASS)
 library(patchwork)
+library(factoextra)
 
+# Load data
 source("scripts/config.R")
 source("scripts/load_gene_functionality_zscores.R")
 zscores_all <- load_gene_functionality_zscores()
 
-colnames(zscores_all)
 # Define features to analyze
 PCA_12_SELECT_FEATURES <- c("GC_percentage",
                          "CpG",
@@ -148,8 +149,34 @@ pca_protein_plot
 ggsave(PCA_PROTEIN_20_FEATURES_LOADINGS_PLOT_FILE, protein_loadings_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
 
 
+# Compute contribution of features to variation of PCAs
+mrna_pca <- princomp(protein_data_normalized |> dplyr::select(-Dataset) |> scale())
+summary(mrna_pca)
 
-# PCA Analisys on z-scores for lncRNA
+# Inspect variable loadings
+mrna_pca$loadings[, 1:3]
+
+# Scree Plot
+fviz_eig(mrna_pca, addlabels = TRUE)
+
+# Graph of the variables
+fviz_pca_var(mrna_pca, col.var = "black")
+
+# Contribution of each variable
+fviz_cos2(mrna_pca, choice = "var", axes = 1:2, title = "Contribution of Features to PC 1 and 2 Variance - mRNA")
+
+# Biplot
+fviz_pca_var(mrna_pca, col.var = "cos2",
+             gradient.cols = c("black", "orchid", "blue"),
+             repel = TRUE,
+             title = "Biplot - mRNA",
+             xlab = "PC1 (26.5%)",
+             ylab = "PC2 (12.3%)"
+)
+
+
+
+# --- PCA Analisys on z-scores for lncRNA ---
 lncrna_pca_result <- prcomp(lncrna_data_normalized |> dplyr::select(-Dataset) |> scale(), center = TRUE, rank. = 5)
 summary(lncrna_pca_result)
 lncrna_pc_scores <- as.data.frame(lncrna_pca_result$x[,1:2])
@@ -213,7 +240,34 @@ pca_lncrna_plot
 ggsave(PCA_LNCRNA_20_FEATURES_LOADINGS_PLOT_FILE, lncrna_loadings_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
 
 
-# PCA Analisys on z-scores for sncRNA
+# Compute contribution of features to variation of PCAs
+lncrna_pca <- princomp(lncrna_data_normalized |> dplyr::select(-Dataset) |> scale())
+summary(lncrna_pca)
+
+# Inspect variable loadings
+lncrna_pca$loadings[, 1:3]
+
+# Scree Plot
+fviz_eig(lncrna_pca, addlabels = TRUE)
+
+# Graph of the variables
+fviz_pca_var(lncrna_pca, col.var = "black")
+
+# Contribution of each variable
+fviz_cos2(lncrna_pca, choice = "var", axes = 1:2, title = "Contribution of Features to PC 1 and 2 Variance - lncRNA")
+
+# Biplot
+fviz_pca_var(lncrna_pca, col.var = "cos2",
+             gradient.cols = c("black", "orchid", "blue"),
+             repel = TRUE,
+             title = "Biplot - lncRNA",
+             xlab = "PC1 (26.5%)",
+             ylab = "PC2 (12.3%)"
+)
+
+
+
+# --- PCA Analisys on z-scores for sncRNA ---
 sncrna_pca_result <- prcomp(sncrna_data_normalized |> dplyr::select(-Dataset) |> scale(), scale. = TRUE, center = TRUE, rank. = 5)
 summary(sncrna_pca_result)
 sncrna_pc_scores <- as.data.frame(sncrna_pca_result$x[,1:2])
@@ -277,6 +331,33 @@ pca_sncrna_plot
 ggsave(PCA_SNCRNA_20_FEATURES_LOADINGS_PLOT_FILE, sncrna_loadings_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
 
 
+# Compute contribution of features to variation of PCAs
+sncrna_pca <- princomp(sncrna_data_normalized |> dplyr::select(-Dataset) |> scale())
+summary(sncrna_pca)
+
+# Inspect variable loadings
+sncrna_pca$loadings[, 1:3]
+
+# Scree Plot
+fviz_eig(sncrna_pca, addlabels = TRUE)
+
+# Graph of the variables
+fviz_pca_var(sncrna_pca, col.var = "black")
+
+# Contribution of each variable
+fviz_cos2(sncrna_pca, choice = "var", axes = 1:2, title = "Contribution of Features to PC 1 and 2 Variance - sncRNA")
+
+# Biplot
+fviz_pca_var(sncrna_pca, col.var = "cos2",
+             gradient.cols = c("black", "orchid", "blue"),
+             repel = TRUE,
+             title = "Biplot - sncRNA",
+             xlab = "PC1 (26.5%)",
+             ylab = "PC2 (12.3%)"
+             )
+
+
+
 # Join the plots in a single patchwork
 pca_joined_plot <- (pca_protein_plot + pca_sncrna_plot + pca_lncrna_plot) +
   plot_annotation(title = "Principal Component Analysis",
@@ -287,3 +368,8 @@ pca_joined_plot <- (pca_protein_plot + pca_sncrna_plot + pca_lncrna_plot) +
         plot.tag = element_text(size = 34, face = "bold", hjust = 0, vjust = 0))
 pca_joined_plot
 ggsave(PCA_20_FEATURES_LOADINGS_JOINED_PLOT_FILE, pca_loadings_joined_plot, scale = 3, width = 3840, height = 1620, units = "px", bg = "white", dpi = 600)
+
+
+
+
+
