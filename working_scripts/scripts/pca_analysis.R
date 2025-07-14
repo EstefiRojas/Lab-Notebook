@@ -149,6 +149,8 @@ pca_protein_plot
 ggsave(PCA_PROTEIN_20_FEATURES_LOADINGS_PLOT_FILE, protein_loadings_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
 
 
+# Change colnames
+colnames(protein_data_normalized) <- c(PCA_20_SELECT_FEATURES_LABELS, "Dataset")
 # Compute contribution of features to variation of PCAs
 mrna_pca <- princomp(protein_data_normalized |> dplyr::select(-Dataset) |> scale())
 summary(mrna_pca)
@@ -165,14 +167,29 @@ fviz_pca_var(mrna_pca, col.var = "black")
 # Contribution of each variable
 fviz_cos2(mrna_pca, choice = "var", axes = 1:2, title = "Contribution of Features to PC 1 and 2 Variance - mRNA")
 
+# 1. Create the plot object, but don't print it yet
+p <- fviz_cos2(mrna_pca, choice = "var", axes = 1:2, title = "Contribution of Features to PC 1 and 2 Variance - mRNA")
+
+# 2. Modify the plot object's aesthetics
+# The labels are text, so we target the 'text' aesthetic.
+# We set a new, larger size for all text elements.
+p_modified <- p + theme(text = element_text(size = 26),
+                        axis.text.x = element_text(angle = 90, vjust = 0.5)) # Change 16 to your desired size
+
+# 3. Print the modified plot
+print(p_modified)
+
 # Biplot
 fviz_pca_var(mrna_pca, col.var = "cos2",
              gradient.cols = c("black", "orchid", "blue"),
              repel = TRUE,
              title = "Biplot - mRNA",
-             xlab = "PC1 (26.5%)",
-             ylab = "PC2 (12.3%)"
-)
+             xlab = "PC1 (23.3%)",
+             ylab = "PC2 (12.8%)"
+             ) +
+  theme(
+    text = element_text(size = 26)
+  )
 
 
 
@@ -256,14 +273,29 @@ fviz_pca_var(lncrna_pca, col.var = "black")
 # Contribution of each variable
 fviz_cos2(lncrna_pca, choice = "var", axes = 1:2, title = "Contribution of Features to PC 1 and 2 Variance - lncRNA")
 
+# 1. Create the plot object, but don't print it yet
+p <- fviz_cos2(lncrna_pca, choice = "var", axes = 1:2, title = "Contribution of Features to PC 1 and 2 Variance - lncRNA")
+
+# 2. Modify the plot object's aesthetics
+# The labels are text, so we target the 'text' aesthetic.
+# We set a new, larger size for all text elements.
+p_modified <- p + theme(text = element_text(size = 26),
+                        axis.text.x = element_text(angle = 90, vjust = 0.5)) # Change 16 to your desired size
+
+# 3. Print the modified plot
+print(p_modified)
+
 # Biplot
 fviz_pca_var(lncrna_pca, col.var = "cos2",
              gradient.cols = c("black", "orchid", "blue"),
              repel = TRUE,
              title = "Biplot - lncRNA",
-             xlab = "PC1 (26.5%)",
-             ylab = "PC2 (12.3%)"
-)
+             xlab = "PC1 (22.2%)",
+             ylab = "PC2 (13.6%)"
+             ) +
+  theme(
+    text = element_text(size = 26)
+  )
 
 
 
@@ -347,6 +379,18 @@ fviz_pca_var(sncrna_pca, col.var = "black")
 # Contribution of each variable
 fviz_cos2(sncrna_pca, choice = "var", axes = 1:2, title = "Contribution of Features to PC 1 and 2 Variance - sncRNA")
 
+# 1. Create the plot object, but don't print it yet
+p <- fviz_cos2(sncrna_pca, choice = "var", axes = 1:2, title = "Contribution of Features to PC 1 and 2 Variance - sncRNA")
+
+# 2. Modify the plot object's aesthetics
+# The labels are text, so we target the 'text' aesthetic.
+# We set a new, larger size for all text elements.
+p_modified <- p + theme(text = element_text(size = 26),
+                        axis.text.x = element_text(angle = 90, vjust = 0.5)) # Change 16 to your desired size
+
+# 3. Print the modified plot
+print(p_modified)
+
 # Biplot
 fviz_pca_var(sncrna_pca, col.var = "cos2",
              gradient.cols = c("black", "orchid", "blue"),
@@ -354,7 +398,11 @@ fviz_pca_var(sncrna_pca, col.var = "cos2",
              title = "Biplot - sncRNA",
              xlab = "PC1 (26.5%)",
              ylab = "PC2 (12.3%)"
-             )
+             ) +
+  theme(
+    text = element_text(size = 26)
+  )
+  
 
 
 
