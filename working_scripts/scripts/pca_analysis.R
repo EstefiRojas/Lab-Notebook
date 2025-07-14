@@ -256,7 +256,8 @@ pca_lncrna_plot <- ggplot(lncrna_pc_scores, aes(x = PC1, y = PC2, shape = `Gene 
 pca_lncrna_plot
 ggsave(PCA_LNCRNA_20_FEATURES_LOADINGS_PLOT_FILE, lncrna_loadings_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
 
-
+# Change colnames
+colnames(lncrna_data_normalized) <- c(PCA_20_SELECT_FEATURES_LABELS, "Dataset")
 # Compute contribution of features to variation of PCAs
 lncrna_pca <- princomp(lncrna_data_normalized |> dplyr::select(-Dataset) |> scale())
 summary(lncrna_pca)
@@ -362,7 +363,8 @@ pca_sncrna_plot <- ggplot(sncrna_pc_scores, aes(x = PC1, y = PC2, shape = `Gene 
 pca_sncrna_plot
 ggsave(PCA_SNCRNA_20_FEATURES_LOADINGS_PLOT_FILE, sncrna_loadings_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
 
-
+# Change colnames
+colnames(sncrna_data_normalized) <- c(PCA_20_SELECT_FEATURES_LABELS, "Dataset")
 # Compute contribution of features to variation of PCAs
 sncrna_pca <- princomp(sncrna_data_normalized |> dplyr::select(-Dataset) |> scale())
 summary(sncrna_pca)
