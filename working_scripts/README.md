@@ -76,7 +76,6 @@ The analysis is composed of several R scripts, which are executed in order by `w
 -   **`load_gene_functionality_features.R`**: Loads the primary gene functionality features.
 -   **`load_gene_functionality_zscores.R`**: Helper script to load pre-computed z-scores for gene functionality features.
 -   **`load_epigenetic_zscores.R`**: Helper script to load pre-computed z-scores for epigenetic features.
--   **`load_ks_stats_utils.R`**: Provides utility functions for performing Kolmogorov-Smirnov (KS) tests.
 
 ### Core Analysis
 

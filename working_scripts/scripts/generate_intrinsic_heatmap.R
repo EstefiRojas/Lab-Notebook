@@ -22,7 +22,7 @@ library(plotly)   # For combining the final plots
 #######################################
 # Load KS statistics utility functions. (A custom version of ks to keep the sign in the D statistic)
 source("scripts/config.R")
-source("scripts/load_ks_stats_utils.R")
+source("scripts/utils.R")
 
 source("scripts/load_dinucleotide_features.R")
 feature_matrix <- load_dinucleotide_features()

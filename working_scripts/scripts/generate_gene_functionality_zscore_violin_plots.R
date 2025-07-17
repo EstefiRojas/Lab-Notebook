@@ -101,11 +101,12 @@ df_long_all$`Gene type` <- factor(df_long_all$`Gene type`, levels = c("mRNA\n(+)
                                                                       "lncRNA\n(-)"))
 
 # Function to generate the violin plots.
-create_violin_plot <- function(df_long_format, ylimit, title, violin_adjust = 1, violin_scale = "width") {
+create_violin_plot <- function(df_long_format, ylimit, title, violin_adjust = 1, violin_scale = "width", kernel = "gaussian", bw = "nrd0") {
   p <- ggplot(df_long_format, aes(x = feature, y = z_score, fill = `Gene type`)) +
     #geom_jitter() + 
-    geom_violin(scale = violin_scale, na.rm = TRUE, adjust = violin_adjust, trim = FALSE) +
+    geom_violin(scale = violin_scale, na.rm = TRUE, adjust = violin_adjust, trim = FALSE, kernel = kernel, bw = bw, bounds = ylimit) +
     geom_boxplot(alpha=0.0, outliers=TRUE, na.rm = TRUE, position = position_dodge(width = 0.9), width=0.2) +
+    #geom_jitter(alpha=0.3, size = 0.2, na.rm = TRUE) +
     facet_wrap(~ feature, scales = "free") + 
     labs(title = "Conservation", x = "Feature", y = "Robust Z-score") +
     theme_minimal(base_size = 34) +
@@ -126,12 +127,13 @@ create_violin_plot <- function(df_long_format, ylimit, title, violin_adjust = 1,
       strip.text = element_text(margin = ggplot2::margin(0,0,40,0))
     ) +
     scale_fill_manual(values = c("#F4A582FF","#c9e3f6FF","#D6604DFF","#56bdfcFF","#e37b88FF","#53a4f5FF")) + # colors
+    scale_color_manual(values = c("#F4A582FF","#c9e3f6FF","#D6604DFF","#56bdfcFF","#e37b88FF","#53a4f5FF")) + # colors
     coord_cartesian(ylim = ylimit) # Zoom into an specific area without removing data points
   
   ggsave(paste(title,".png",sep = ""),path = VIOLIN_PLOTS_DIR, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
   return(p)
 }
-
+help("geom_violin")
 # Create plots for:
 # Conservation.
 df_long_conservation_paper <- df_long_all[df_long_all$feature=="PhyloP-mammals" 
@@ -145,6 +147,21 @@ create_violin_plot(df_long_conservation_paper, c(-2, 8), "conservation_review2")
 df_long_expression_paper <- df_long_all[df_long_all$feature=="Tissue RPKM" 
                                         | df_long_all$feature=="Primary cell RPKM", ]
 create_violin_plot(df_long_expression_paper, c(-1, 500), "expression_review_test")
+
+create_violin_plot(df_long_expression_paper, c(-1,500), "expression_scale_width_adjust_1000_bw_nrd0", violin_scale = "width", violin_adjust = 1000, bw = "nrd0")
+create_violin_plot(df_long_expression_paper, c(-1,500), "expression_scale_width_adjust_1000_bw_nrd", violin_scale = "width", violin_adjust = 1000, bw = "nrd")
+create_violin_plot(df_long_expression_paper, c(-1,500), "expression_scale_width_adjust_1000_bw_uvc", violin_scale = "width", violin_adjust = 1000, bw = "ucv")
+create_violin_plot(df_long_expression_paper, c(-1,500), "expression_scale_width_adjust_1000_bw_bvc", violin_scale = "width", violin_adjust = 1000, bw = "bcv")
+create_violin_plot(df_long_expression_paper, c(-1,50), "expression_scale_width_adjust_1000_bw_SJ", violin_scale = "width", violin_adjust = 500, bw = "SJ", bounds = c(-1,500))
+
+create_violin_plot(df_long_expression_paper, c(-1,50), "expression_scale_width_adjust_1_bw_nrd0", violin_scale = "width", violin_adjust = 1/2, bw = "nrd0")
+create_violin_plot(df_long_expression_paper, c(-1,50), "expression_scale_width_adjust_0.5_bw_nrd", violin_scale = "width", violin_adjust = 1/2, bw = "nrd")
+create_violin_plot(df_long_expression_paper, c(-1,500), "expression_scale_width_adjust_0.5_bw_uvc", violin_scale = "width", violin_adjust = 1/2, bw = "ucv")
+create_violin_plot(df_long_expression_paper, c(-1,500), "expression_scale_width_adjust_0.5_bw_bvc", violin_scale = "width", violin_adjust = 1/2, bw = "bcv")
+create_violin_plot(df_long_expression_paper, c(-1,500), "expression_scale_width_adjust_0.25_bw_SJ", violin_scale = "width", violin_adjust = 1/4, bw = "SJ", bounds = c(-1,700))
+
+create_violin_plot(df_long_expression_paper, c(-1,500), "expression_scale_width_adjust_0.5_bw_nrd0_jitter", violin_scale = "width", violin_adjust = 1/2, bw = "nrd0")
+
 
 # Intrinsic.
 df_long_intrinsic1 <- df_long_all[df_long_all$feature=="GT"
@@ -185,9 +202,59 @@ custom_order <- c("Repeat free", "Copies")
 df_long_repeat_assoc_coding$feature <- factor(df_long_repeat_assoc_coding$feature, levels = custom_order)
 df_long_repeat_assoc_coding_ordered <- df_long_repeat_assoc_coding %>%
   arrange(feature)
-create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,5), "association_review_trimtrue", violin_scale = "width")
-create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-1,1000), "association_review2")
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,8), "association_scale_width_adjust_1", violin_scale = "width", violin_adjust = 1)
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,8), "association_scale_area_adjust_1", violin_scale = "area", violin_adjust = 1)
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,8), "association_scale_count_adjust_1", violin_scale = "count", violin_adjust = 1)
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,8), "association_scale_area_adjust-0.5", violin_scale = "area", violin_adjust = 1/2)
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,8), "association_scale_area_adjust_2", violin_scale = "area", violin_adjust = 2)
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,8), "association_scale_width_adjust_0.5", violin_scale = "width", violin_adjust = 1/2)
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,8), "association_scale_width_adjust_2", violin_scale = "width", violin_adjust = 2)
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,8), "association_scale_count_adjust_0.5", violin_scale = "count", violin_adjust = 1/2)
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,8), "association_scale_count_adjust_2", violin_scale = "count", violin_adjust = 2)
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(NA,NA), "association_scale_area_adjust_1_bounds_null", violin_scale = "area", violin_adjust = 1)
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,8), "association_scale_area_adjust_1_kernel_gauss", violin_scale = "area", violin_adjust = 1, kernel = "gaussian")
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,8), "association_scale_area_adjust_1_kernel_rectangular", violin_scale = "area", violin_adjust = 1, kernel = "rectangular")
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,8), "association_scale_area_adjust_1_kernel_triangular", violin_scale = "area", violin_adjust = 1, kernel = "triangular")
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,8), "association_scale_area_adjust_1_kernel_epanechnikov", violin_scale = "area", violin_adjust = 1, kernel = "epanechnikov")
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,8), "association_scale_area_adjust_1_kernel_biweight", violin_scale = "area", violin_adjust = 1, kernel = "biweight")
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,8), "association_scale_area_adjust_1_kernel_cosine", violin_scale = "area", violin_adjust = 1, kernel = "cosine")
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,8), "association_scale_area_adjust_1_bw_nrd0", violin_scale = "area", violin_adjust = 1, bw = "nrd0")
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,8), "association_scale_area_adjust_1_bw_nrd", violin_scale = "area", violin_adjust = 1, bw = "nrd")
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,8), "association_scale_area_adjust_1_bw_ucv", violin_scale = "area", violin_adjust = 1, bw = "ucv")
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,8), "association_scale_area_adjust_1_bw_bcv", violin_scale = "area", violin_adjust = 1, bw = "bcv")
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,8), "association_scale_area_adjust_1_bw_SJ", violin_scale = "area", violin_adjust = 1, bw = "SJ")
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,8), "association_scale_width_adjust_1_bw_nrd0", violin_scale = "width", violin_adjust = 1, bw = "nrd0")
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,8), "association_scale_width_adjust_1_bw_nrd", violin_scale = "width", violin_adjust = 1, bw = "nrd")
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,8), "association_scale_width_adjust_1_bw_uvc", violin_scale = "width", violin_adjust = 1, bw = "ucv")
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,8), "association_scale_width_adjust_1_bw_bvc", violin_scale = "width", violin_adjust = 1, bw = "bcv")
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,8), "association_scale_width_adjust_1_bw_SJ", violin_scale = "width", violin_adjust = 1, bw = "SJ")
 
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,8), "association_scale_width_adjust_1000_bw_nrd0", violin_scale = "width", violin_adjust = 1000, bw = "nrd0")
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,8), "association_scale_width_adjust_1000_bw_nrd", violin_scale = "width", violin_adjust = 1000, bw = "nrd")
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,8), "association_scale_width_adjust_1000_bw_uvc", violin_scale = "width", violin_adjust = 1000, bw = "ucv")
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,8), "association_scale_width_adjust_1000_bw_bvc", violin_scale = "width", violin_adjust = 1000, bw = "bcv")
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-2.5,8), "association_scale_width_adjust_1000_bw_SJ", violin_scale = "width", violin_adjust = 1000, bw = "SJ")
+
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-100,5000), "association_scale_width_adjust_1000_bw_nrd0", violin_scale = "width", violin_adjust = 1000, bw = "nrd0")
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-100,5000), "association_scale_width_adjust_1000_bw_nrd", violin_scale = "width", violin_adjust = 1000, bw = "nrd")
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-100,5000), "association_scale_width_adjust_1000_bw_uvc", violin_scale = "width", violin_adjust = 1000, bw = "ucv")
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-100,5000), "association_scale_width_adjust_1000_bw_bvc", violin_scale = "width", violin_adjust = 1000, bw = "bcv")
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(-100,5000), "association_scale_width_adjust_1000_bw_SJ", violin_scale = "width", violin_adjust = 1000, bw = "SJ")
+
+
+
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(0,1000), "association_review2", violin_adjust = 1/2)
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(0,1000), "association_review2", violin_adjust = 1/2)
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(0,1000), "association_review2", violin_adjust = 1/2)
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(0,1000), "association_review2", violin_adjust = 1/2)
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(0,1000), "association_review2", violin_adjust = 1/2)
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(0,1000), "association_review2", violin_adjust = 1/2)
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(0,1000), "association_review2", violin_adjust = 1/2)
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(0,1000), "association_review2", violin_adjust = 1/2)
+create_violin_plot(df_long_repeat_assoc_coding_ordered, c(0,1000), "association_review2", violin_adjust = 1/2)
+
+
+help("geom_violin")
 # Structure.
 df_long_struct_paper <- df_long_all[df_long_all$feature=="Covariance" 
                                     | df_long_all$feature=="MFE" 

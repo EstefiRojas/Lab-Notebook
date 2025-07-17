@@ -9,7 +9,7 @@ source("scripts/load_dinucleotide_features.R")
 source("scripts/load_epigenetic_features.R")
 source("scripts/load_gene_functionality_zscores.R")
 source("scripts/load_epigenetic_zscores.R")
-source("scripts/load_ks_stats_utils.R")
+source("scripts/utils.R")
 
 # Load and compute z-scores
 feature_matrix <- load_gene_functionality_features()
