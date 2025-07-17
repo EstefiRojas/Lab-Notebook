@@ -122,6 +122,10 @@ INTRINSIC_MRNA_KS_STAT_SAMPLE_FILE <- file.path(KS_STATS_DIR, "intrinsic_mrna_ks
 INTRINSIC_LNCRNA_KS_STAT_SAMPLE_FILE <- file.path(KS_STATS_DIR, "intrinsic_lncrna_ks_stat_sample.csv")
 INTRINSIC_SNCRNA_KS_STAT_SAMPLE_FILE <- file.path(KS_STATS_DIR, "intrnisic_sncrna_ks_stat_sample.csv")
 INTRINSIC_MEAN_KS_STAT_SAMPLE_FILE <- file.path(KS_STATS_DIR, "intrinsic_mean_ks_stat_sample.csv")
+GENE_FUNCTIONALITY_MRNA_KS_STAT_FILE <- file.path(KS_STATS_DIR, "gene_functionality_mrna_ks_stat_sample.csv")
+GENE_FUNCTIONALITY_LNCRNA_KS_STAT_FILE <- file.path(KS_STATS_DIR, "gene_functionality_lncrna_ks_stat_sample.csv")
+GENE_FUNCTIONALITY_SNCRNA_KS_STAT_FILE <- file.path(KS_STATS_DIR, "gene_functionality_sncrna_ks_stat_sample.csv")
+GENE_FUNCTIONALITY_MEAN_KS_STAT_FILE <- file.path(KS_STATS_DIR, "gene_functionality_mean_ks_stat_sample.csv")
 
 # Distance effect files
 EFFECT_ON_DISTANCE_JOINED_FILE <- file.path(DISTANCE_EFFECT_HEATSCATTER_DIR, "effectOnDistanceJoined5k_5M.png")
