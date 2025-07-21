@@ -60,6 +60,7 @@ This chunk generates all the plots for the analysis, including heatmaps and viol
 # Generate plots
 source("scripts/generate_epigenetic_heatmap.R")
 source("scripts/generate_intrinsic_heatmap.R")
+source("scripts/generate_gene_functionality_heatmap.R")
 source("scripts/generate_epigenetic_zscore_jitter_plots.R")
 source("scripts/generate_epigenetic_zscore_violin_plots.R")
 source("scripts/generate_gene_functionality_zscore_violin_plots.R")

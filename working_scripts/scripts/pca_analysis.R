@@ -83,11 +83,11 @@ sncrna_data_normalized <- sncrna_zscores_all |>
 
 
 
-############
-# PCA Analisys on z-scores for protein coding
+#######################################################
+# --- PCA Analisys on z-scores for protein coding --- #
 protein_pca_result <- prcomp(protein_data_normalized |> dplyr::select(-Dataset) |> scale(), center = TRUE, rank. = 5)
 
-protein_pc_scores <- as.data.frame(protein_pca_result$x[,1:2])
+protein_pc_scores <- as.data.frame(protein_pca_result$x)
 
 protein_dataset_vector <- protein_data_normalized$Dataset
 protein_pc_scores$`Gene type` <- factor(protein_dataset_vector,
@@ -146,7 +146,7 @@ pca_protein_plot <- ggplot(protein_pc_scores, aes(x = PC1, y = PC2, shape = `Gen
   xlim(-10, 5) +
   ylim(-5, 5)
 pca_protein_plot
-ggsave(PCA_PROTEIN_20_FEATURES_LOADINGS_PLOT_FILE, protein_loadings_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
+ggsave(paste0(PCA_PROTEIN_20_FEATURES_LOADINGS_PLOT_FILE,"_pc2.png"), pca_protein_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
 
 
 # Change colnames
@@ -159,21 +159,24 @@ summary(mrna_pca)
 mrna_pca$loadings[, 1:3]
 
 # Scree Plot
-fviz_eig(mrna_pca, addlabels = TRUE)
+p1 <- fviz_eig(mrna_pca, addlabels = TRUE, title = "Scree plot - mRNA")
+p1_mod <- p1 + labs(x = "Principal Components") + theme(text = element_text(size = 26))
+p1_mod$layers[[4]]$aes_params$size <- 8
+print(p1_mod)
 
 # Graph of the variables
 fviz_pca_var(mrna_pca, col.var = "black")
 
 # Contribution of each variable
-fviz_cos2(mrna_pca, choice = "var", axes = 1:2, title = "Contribution of Features to PC 1 and 2 Variance - mRNA")
+fviz_cos2(mrna_pca, choice = "var", axes = 1, title = "Contribution of Features to PC 1 Variance - mRNA")
 
 # 1. Create the plot object, but don't print it yet
-p <- fviz_cos2(mrna_pca, choice = "var", axes = 1:2, title = "Contribution of Features to PC 1 and 2 Variance - mRNA")
+p <- fviz_cos2(mrna_pca, choice = "var", axes = 5, title = "Contribution of Features to PC 5 Variance - mRNA")
 
 # 2. Modify the plot object's aesthetics
 # The labels are text, so we target the 'text' aesthetic.
 # We set a new, larger size for all text elements.
-p_modified <- p + theme(text = element_text(size = 26),
+p_modified <- p + labs(y = "Contribution to PC5 Variance") + theme(text = element_text(size = 26),
                         axis.text.x = element_text(angle = 90, vjust = 0.5)) # Change 16 to your desired size
 
 # 3. Print the modified plot
@@ -192,11 +195,11 @@ fviz_pca_var(mrna_pca, col.var = "cos2",
   )
 
 
-
-# --- PCA Analisys on z-scores for lncRNA ---
+###############################################
+# --- PCA Analisys on z-scores for lncRNA --- #
 lncrna_pca_result <- prcomp(lncrna_data_normalized |> dplyr::select(-Dataset) |> scale(), center = TRUE, rank. = 5)
 summary(lncrna_pca_result)
-lncrna_pc_scores <- as.data.frame(lncrna_pca_result$x[,1:2])
+lncrna_pc_scores <- as.data.frame(lncrna_pca_result$x)
 unique(lncrna_data_normalized$Dataset)
 lncrna_dataset_vector <- lncrna_data_normalized$Dataset
 lncrna_pc_scores$`Gene type` <- factor(lncrna_dataset_vector,
@@ -209,17 +212,17 @@ lncrna_pc_scores_pos <- lncrna_pc_scores %>%
   filter(`Gene type`=="lncRNA")
 lncrna_pc_scores_neg <- lncrna_pc_scores %>%
   filter(`Gene type`=="Negative controls")
-lims <- c(range(lncrna_pc_scores$PC1), range(lncrna_pc_scores$PC2))
-density_func_lncrna <- kde2d(lncrna_pc_scores_pos$PC1, lncrna_pc_scores_pos$PC2, n = 80, lims = lims)
-density_neg_lncrna <- kde2d(lncrna_pc_scores_neg$PC1, lncrna_pc_scores_neg$PC2, n = 80, lims = lims)
+lims <- c(range(lncrna_pc_scores$PC1), range(lncrna_pc_scores$PC5))
+density_func_lncrna <- kde2d(lncrna_pc_scores_pos$PC1, lncrna_pc_scores_pos$PC5, n = 80, lims = lims)
+density_neg_lncrna <- kde2d(lncrna_pc_scores_neg$PC1, lncrna_pc_scores_neg$PC5, n = 80, lims = lims)
 
-filled.contour(density_func_lncrna, xlab = "PC1", ylab = "PC2", main = "Filled Contour Plot of PCA Density")
-filled.contour(density_neg_lncrna, xlab = "PC1", ylab = "PC2", main = "Filled Contour Plot of PCA Density")
+filled.contour(density_func_lncrna, xlab = "PC1", ylab = "PC5", main = "Filled Contour Plot of PCA Density")
+filled.contour(density_neg_lncrna, xlab = "PC1", ylab = "PC5", main = "Filled Contour Plot of PCA Density")
 
-df_density_pos_lncrna <- expand.grid(PC1 = density_func_lncrna$x, PC2 = density_func_lncrna$y)
+df_density_pos_lncrna <- expand.grid(PC1 = density_func_lncrna$x, PC5 = density_func_lncrna$y)
 df_density_pos_lncrna$z <- as.vector(density_func_lncrna$z)
 
-df_density_neg_lncrna <- expand.grid(PC1 = density_neg_lncrna$x, PC2 = density_neg_lncrna$y)
+df_density_neg_lncrna <- expand.grid(PC1 = density_neg_lncrna$x, PC5 = density_neg_lncrna$y)
 df_density_neg_lncrna$z <- as.vector(density_neg_lncrna$z)
 
 # Create a factor for sequence_type for shapes
@@ -229,18 +232,18 @@ df_density_neg_lncrna$`Gene type` <- c("Negative controls")
 df_density_neg_lncrna$`Gene type` <- factor(df_density_neg_lncrna$`Gene type`)
 
 # Plot PCA
-pca_lncrna_plot <- ggplot(lncrna_pc_scores, aes(x = PC1, y = PC2, shape = `Gene type`, color = `Gene type`)) +
+pca_lncrna_plot <- ggplot(lncrna_pc_scores, aes(x = PC1, y = PC5, shape = `Gene type`, color = `Gene type`)) +
   geom_point(data = subset(lncrna_pc_scores, `Gene type` == "Negative controls"),
-             aes(x = PC1, y = PC2), shape = 4, color = "#53a4f5FF", size = 4) +
+             aes(x = PC1, y = PC5), shape = 4, color = "#53a4f5FF", size = 4) +
   # Add semi-transparent density contours
-  geom_contour(data = df_density_neg_lncrna, aes(x = PC1, y = PC2, z = z), 
+  geom_contour(data = df_density_neg_lncrna, aes(x = PC1, y = PC5, z = z), 
                bins= 20, color = "#0c71d6", alpha = 0.6, linewidth = 1) +
   geom_point(data = subset(lncrna_pc_scores, `Gene type` == "lncRNA"),
-             aes(x = PC1, y = PC2), shape = 19, color = "#e37b88FF", size = 4) +
+             aes(x = PC1, y = PC5), shape = 19, color = "#e37b88FF", size = 4) +
   # Add semi-transparent density contours for lncRNA
-  geom_contour(data = df_density_pos_lncrna, aes(x = PC1, y = PC2, z = z), 
+  geom_contour(data = df_density_pos_lncrna, aes(x = PC1, y = PC5, z = z), 
                bins = 20, color = "#781a25", alpha = 0.6, linewidth = 1) +
-  labs(subtitle = "lncRNA", x = "PC1 (22.22%)", y = "PC2 (13.57%)") +
+  labs(subtitle = "lncRNA", x = "PC1 (22.22%)", y = "PC5 (6.95%)") +
   theme_minimal()+
   theme(
     plot.subtitle = element_text(size = 38, hjust = 0.5),  # Increase title size
@@ -254,7 +257,7 @@ pca_lncrna_plot <- ggplot(lncrna_pc_scores, aes(x = PC1, y = PC2, shape = `Gene 
   xlim(-10, 5) + 
   ylim(-5, 5)
 pca_lncrna_plot
-ggsave(PCA_LNCRNA_20_FEATURES_LOADINGS_PLOT_FILE, lncrna_loadings_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
+ggsave(paste0(PCA_LNCRNA_20_FEATURES_LOADINGS_PLOT_FILE,"_pc5.png"), pca_lncrna_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
 
 # Change colnames
 colnames(lncrna_data_normalized) <- c(PCA_20_SELECT_FEATURES_LABELS, "Dataset")
@@ -266,21 +269,24 @@ summary(lncrna_pca)
 lncrna_pca$loadings[, 1:3]
 
 # Scree Plot
-fviz_eig(lncrna_pca, addlabels = TRUE)
+p1 <- fviz_eig(lncrna_pca, addlabels = TRUE, title = "Scree plot - lncRNA")
+p1_mod <- p1 + labs(x = "Principal Components") + theme(text = element_text(size = 26))
+p1_mod$layers[[4]]$aes_params$size <- 8
+print(p1_mod)
 
 # Graph of the variables
 fviz_pca_var(lncrna_pca, col.var = "black")
 
 # Contribution of each variable
-fviz_cos2(lncrna_pca, choice = "var", axes = 1:2, title = "Contribution of Features to PC 1 and 2 Variance - lncRNA")
+fviz_cos2(lncrna_pca, choice = "var", axes = 1, title = "Contribution of Features to PC 1 Variance - lncRNA")
 
 # 1. Create the plot object, but don't print it yet
-p <- fviz_cos2(lncrna_pca, choice = "var", axes = 1:2, title = "Contribution of Features to PC 1 and 2 Variance - lncRNA")
+p <- fviz_cos2(lncrna_pca, choice = "var", axes = 1, title = "Contribution of Features to PC 1 Variance - lncRNA")
 
 # 2. Modify the plot object's aesthetics
 # The labels are text, so we target the 'text' aesthetic.
 # We set a new, larger size for all text elements.
-p_modified <- p + theme(text = element_text(size = 26),
+p_modified <- p + labs(y = "Contribution to PC1 Variance") + theme(text = element_text(size = 26),
                         axis.text.x = element_text(angle = 90, vjust = 0.5)) # Change 16 to your desired size
 
 # 3. Print the modified plot
@@ -299,11 +305,11 @@ fviz_pca_var(lncrna_pca, col.var = "cos2",
   )
 
 
-
-# --- PCA Analisys on z-scores for sncRNA ---
+###############################################
+# --- PCA Analisys on z-scores for sncRNA --- #
 sncrna_pca_result <- prcomp(sncrna_data_normalized |> dplyr::select(-Dataset) |> scale(), scale. = TRUE, center = TRUE, rank. = 5)
 summary(sncrna_pca_result)
-sncrna_pc_scores <- as.data.frame(sncrna_pca_result$x[,1:2])
+sncrna_pc_scores <- as.data.frame(sncrna_pca_result$x)
 
 sncrna_dataset_vector <- sncrna_data_normalized$Dataset
 sncrna_pc_scores$`Gene type` <- factor(sncrna_dataset_vector,
@@ -316,17 +322,17 @@ sncrna_pc_scores_pos <- sncrna_pc_scores %>%
   filter(`Gene type`=="sncRNA")
 sncrna_pc_scores_neg <- sncrna_pc_scores %>%
   filter(`Gene type`=="Negative controls")
-lims <- c(range(sncrna_pc_scores$PC1), range(sncrna_pc_scores$PC2))
-density_func_sncrna <- kde2d(sncrna_pc_scores_pos$PC1, sncrna_pc_scores_pos$PC2, n = 80, lims = lims)
-density_neg_sncrna <- kde2d(sncrna_pc_scores_neg$PC1, sncrna_pc_scores_neg$PC2, n = 80, lims = lims)
+lims <- c(range(sncrna_pc_scores$PC1), range(sncrna_pc_scores$PC5))
+density_func_sncrna <- kde2d(sncrna_pc_scores_pos$PC1, sncrna_pc_scores_pos$PC5, n = 80, lims = lims)
+density_neg_sncrna <- kde2d(sncrna_pc_scores_neg$PC1, sncrna_pc_scores_neg$PC5, n = 80, lims = lims)
 
-filled.contour(density_func_sncrna, xlab = "PC1", ylab = "PC2", main = "Filled Contour Plot of PCA Density")
-filled.contour(density_neg_sncrna, xlab = "PC1", ylab = "PC2", main = "Filled Contour Plot of PCA Density")
+filled.contour(density_func_sncrna, xlab = "PC1", ylab = "PC5", main = "Filled Contour Plot of PCA Density")
+filled.contour(density_neg_sncrna, xlab = "PC1", ylab = "PC5", main = "Filled Contour Plot of PCA Density")
 
-df_density_pos_sncrna <- expand.grid(PC1 = density_func_sncrna$x, PC2 = density_func_sncrna$y)
+df_density_pos_sncrna <- expand.grid(PC1 = density_func_sncrna$x, PC5 = density_func_sncrna$y)
 df_density_pos_sncrna$z <- as.vector(density_func_sncrna$z)
 
-df_density_neg_sncrna <- expand.grid(PC1 = density_neg_sncrna$x, PC2 = density_neg_sncrna$y)
+df_density_neg_sncrna <- expand.grid(PC1 = density_neg_sncrna$x, PC5 = density_neg_sncrna$y)
 df_density_neg_sncrna$z <- as.vector(density_neg_sncrna$z)
 
 # Create a factor for sequence_type for shapes
@@ -335,18 +341,18 @@ df_density_pos_sncrna$`Gene type` <- factor(df_density_pos_sncrna$`Gene type`)
 df_density_neg_sncrna$`Gene type` <- c("Negative controls")
 df_density_neg_sncrna$`Gene type` <- factor(df_density_neg_sncrna$`Gene type`)
 # Plot PCA
-pca_sncrna_plot <- ggplot(sncrna_pc_scores, aes(x = PC1, y = PC2, shape = `Gene type`, color = `Gene type`)) +
+pca_sncrna_plot <- ggplot(sncrna_pc_scores, aes(x = PC1, y = PC5, shape = `Gene type`, color = `Gene type`)) +
   geom_point(data = subset(sncrna_pc_scores, `Gene type` == "Negative controls"),
-             aes(x = PC1, y = PC2), shape = 4, color = "#56bdfcFF", size = 4) +
+             aes(x = PC1, y = PC5), shape = 4, color = "#56bdfcFF", size = 4) +
   # Add semi-transparent density contours
-  geom_contour(data = df_density_neg_sncrna, aes(x = PC1, y = PC2, z = z), 
+  geom_contour(data = df_density_neg_sncrna, aes(x = PC1, y = PC5, z = z), 
                bins= 20, color = "#0491e8", alpha = 0.6, linewidth = 1) +
   geom_point(data = subset(sncrna_pc_scores, `Gene type` == "sncRNA"),
-             aes(x = PC1, y = PC2), shape = 17, color = "#D6604DFF", size = 4) +
+             aes(x = PC1, y = PC5), shape = 17, color = "#D6604DFF", size = 4) +
   # Add semi-transparent density contours for sncRNA
-  geom_contour(data = df_density_pos_sncrna, aes(x = PC1, y = PC2, z = z), 
+  geom_contour(data = df_density_pos_sncrna, aes(x = PC1, y = PC5, z = z), 
                bins = 20, color = "#471810", alpha = 0.6, linewidth = 1) +
-  labs(subtitle = "sncRNA", x = "PC1 (26.55%)", y = "PC2 (12.30%)") +
+  labs(subtitle = "sncRNA", x = "PC1 (26.55%)", y = "PC5 (5.48%)") +
   theme_minimal()+
   theme(
     plot.subtitle = element_text(size = 38, hjust = 0.5),  # Increase title size
@@ -361,7 +367,7 @@ pca_sncrna_plot <- ggplot(sncrna_pc_scores, aes(x = PC1, y = PC2, shape = `Gene 
   xlim(-10, 5) +
   ylim(-5, 5)
 pca_sncrna_plot
-ggsave(PCA_SNCRNA_20_FEATURES_LOADINGS_PLOT_FILE, sncrna_loadings_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
+ggsave(paste0(PCA_SNCRNA_20_FEATURES_LOADINGS_PLOT_FILE,"_pc5.png"), pca_sncrna_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
 
 # Change colnames
 colnames(sncrna_data_normalized) <- c(PCA_20_SELECT_FEATURES_LABELS, "Dataset")
@@ -373,7 +379,10 @@ summary(sncrna_pca)
 sncrna_pca$loadings[, 1:3]
 
 # Scree Plot
-fviz_eig(sncrna_pca, addlabels = TRUE)
+p1 <- fviz_eig(sncrna_pca, addlabels = TRUE, title = "Scree plot - sncRNA")
+p1_mod <- p1 + labs(x = "Principal Components") + theme(text = element_text(size = 26))
+p1_mod$layers[[4]]$aes_params$size <- 8
+print(p1_mod)
 
 # Graph of the variables
 fviz_pca_var(sncrna_pca, col.var = "black")
@@ -382,12 +391,12 @@ fviz_pca_var(sncrna_pca, col.var = "black")
 fviz_cos2(sncrna_pca, choice = "var", axes = 1:2, title = "Contribution of Features to PC 1 and 2 Variance - sncRNA")
 
 # 1. Create the plot object, but don't print it yet
-p <- fviz_cos2(sncrna_pca, choice = "var", axes = 1:2, title = "Contribution of Features to PC 1 and 2 Variance - sncRNA")
+p <- fviz_cos2(sncrna_pca, choice = "var", axes = 5, title = "Contribution of Features to PC 5 Variance - sncRNA")
 
 # 2. Modify the plot object's aesthetics
 # The labels are text, so we target the 'text' aesthetic.
 # We set a new, larger size for all text elements.
-p_modified <- p + theme(text = element_text(size = 26),
+p_modified <- p + labs(y = "Contribution to PC5 Variance") + theme(text = element_text(size = 26),
                         axis.text.x = element_text(angle = 90, vjust = 0.5)) # Change 16 to your desired size
 
 # 3. Print the modified plot

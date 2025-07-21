@@ -75,58 +75,74 @@ ks_test_custom <- function(x, y) {
   return(list(p.value = label))
 }
 
-
+help("geom")
 # 14 Jul 2025 #
 # The initial part of your script remains the same
 # We assume 'filtered_df', 'new_labels', 'my_comparisons',
 # and 'ks_test_custom' are already defined.
 
-# Start the ggplot object
+
+# --- Start of the plot code ---
 plot_modified <- ggplot(data = filtered_df,
                         aes(x = Essential_Status, y = max_prob, 
                             fill = Essential_Status, color = Essential_Status)) +
   
-  # 1. Add violin and box plots for all groups EXCEPT 'Shared'
-  # We use the data argument to pass a subset of the original data frame
+  # 1. Add violin and box plots (No changes here)
   geom_violin(data = ~ subset(., Essential_Status != "Shared"),
-              scale = "area", na.rm = TRUE, trim = TRUE, bounds = c(0,1)) +
+              scale = "area", na.rm = TRUE, trim = TRUE) +
   geom_boxplot(data = ~ subset(., Essential_Status != "Shared"),
                width = 0.1, alpha = 0.5, na.rm = TRUE, outlier.shape = NA) +
   
-  # 2. Add a jitter plot ONLY for the 'Shared' group
-  geom_jitter(data = ~ subset(., Essential_Status == "Shared"),
-              width = 0.25, size = 3, alpha = 0.8) +
+  # 2. Add a jitter plot for the 'Shared' group
+  # --- CHANGE #1: Removed the manual 'fill' setting ---
+  # The fill color now comes from the main aes() mapping and scale_fill_manual().
+  geom_point(data = ~ subset(., Essential_Status == "Shared"),
+             #position = position_jitter(width = 0.25, height = 0), 
+             size = 5, 
+             shape = 21, 
+             color = "black", # Manually set the BORDER color to black
+             stroke = 1) +
   
-  # Use scale_fill_manual since we mapped the 'fill' aesthetic
+  # 3. Manually set fill colors (No changes here)
   scale_fill_manual(values = c("Cell-type specific" = "#1a53ff", 
-                               "Shared" = "#b30000", 
+                               "Shared" = "#b30000", # This now correctly colors the points AND the legend
                                "Partially shared" = "#87bc45", 
                                "Non-essential" = "#beb9db"),
                     labels = new_labels) +
   
+  # 4. Manually set border colors (No changes here)
   scale_color_manual(values = c("Cell-type specific" = "black", 
-                                "Shared" = "#b30000", 
+                                "Shared" = "#b30000",
                                 "Partially shared" = "black", 
                                 "Non-essential" = "black"),
                      guide = "none") +
   
-  guides(fill = guide_legend(override.aes = list(shape = 21, size = 5))) +
+  # 5. Override the legend glyph to be a filled circle
+  # --- CHANGE #2: Added 'color = "black"' to make the legend key's border black ---
+  guides(fill = guide_legend(override.aes = list(shape = 21, size = 5, color = "black"))) +
   
-  # Update the labels for the new plot layout
+  # 6. Update labels (No changes here)
   labs(
-    title = "Distribution of Functional Probability by Essentiality Group, Liang et.al 2024",
+    title = "Distribution of Functional Probability by Essentiality Group",
+    subtitle = "Liang et.al 2024",
     x = "Essentiality Group",
     y = "Functional Probability",
-    fill = "Essentiality Group" # Update legend title to match 'fill'
+    fill = "Essentiality Group"
   ) +
   
-  # Your custom theme remains the same
+  # 7. Apply custom theme (No changes here)
   theme_minimal() +
   theme(
-    text = element_text(size = 28),
-    axis.text.x = element_text(angle = 45, hjust = 1),
+    text = element_text(size = 18),
+    plot.title = element_text(size = 22, face = "bold"),
+    plot.subtitle = element_text(size = 18),
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 14),
+    axis.text.y = element_text(size = 14),
+    axis.title = element_text(size = 16),
     panel.grid.major = element_line(color = "gray90"),
     panel.grid.minor = element_blank(),
+    legend.title = element_text(size = 16),
+    legend.text = element_text(size = 14),
     legend.position = "right"
   )
 
