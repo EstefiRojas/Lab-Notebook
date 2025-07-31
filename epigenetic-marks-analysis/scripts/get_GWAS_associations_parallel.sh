@@ -1,12 +1,57 @@
 #!/bin/bash
-# This script retrieves GWAS association data in parallel, using a file-based
-# cache and a rate-limiter to avoid re-querying or overloading the API.
 #
-# Dependencies:
-# - jq:       https://jqlang.github.io/jq/
-# - parallel: https://www.gnu.org/software/parallel/
+# GWAS Association Data Parallel Retrieval Script
+# ===============================================
 #
-# Author: Estefania Rojas
+# DESCRIPTION:
+#   This script retrieves GWAS (Genome-Wide Association Studies) association data
+#   in parallel from the EBI GWAS Summary Statistics API. It processes genomic regions
+#   from CSV input files and extracts statistical measures including p-values,
+#   odds ratios, and beta coefficients for epigenetic marks analysis.
+#
+# FEATURES:
+#   - Parallel processing with GNU parallel for improved performance
+#   - File-based JSON caching to avoid redundant API calls
+#   - Rate limiting to respect API constraints (max 10 calls/second)
+#   - Automatic retry logic with exponential backoff
+#   - Resume capability for interrupted runs
+#   - Cross-platform compatibility (macOS/Linux)
+#   - Comprehensive error handling and logging
+#
+# USAGE:
+#   ./get_GWAS_associations_parallel.sh [-v] <regions_to_extract.csv> <output_name>
+#
+# ARGUMENTS:
+#   regions_to_extract.csv  Input CSV file containing genomic regions to query
+#   output_name            Base name for output files (without .csv extension)
+#
+# OPTIONS:
+#   -v    Enable verbose mode for detailed logging output
+#
+# INPUT FORMAT:
+#   CSV file with columns including chromosome positions for:
+#   - TL exon1 regions (columns 9-11: chrm, start, end)
+#   - TL exon2 regions (columns 12-14: chrm, start, end)  
+#   - TL regions (columns 15-17: chrm, start, end)
+#   - TR regions (columns 18-20: chrm, start, end)
+#
+# OUTPUT:
+#   - CSV file with GWAS association statistics for each region
+#   - Log file with processing details and job information
+#   - Cached JSON responses in ../data/cache/gwas_responses/
+#
+# DEPENDENCIES:
+#   - curl:     HTTP client for API requests
+#   - jq:       JSON processor (https://jqlang.github.io/jq/)
+#   - parallel: GNU parallel for job parallelization
+#   - sed:      Stream editor for text processing
+#
+# API ENDPOINT:
+#   https://www.ebi.ac.uk/gwas/summary-statistics/api/
+#
+# AUTHOR: Estefania Rojas
+# VERSION: 1.0
+# DATE: $(date '+%Y-%m-%d')
 #
 ###############################################################################
 
@@ -46,10 +91,13 @@ fi
 # HELPER FUNCTIONS
 ##############################################################
 
-# Function to check for required command-line tools
+# Function: check_dependencies
+# Purpose: Verify that all required command-line tools are available
+# Returns: Exits with code 1 if any dependencies are missing
+# Dependencies checked: curl, jq, parallel, sed
 check_dependencies() {
     local missing=0
-    for cmd in curl jq parallel; do
+    for cmd in curl jq parallel sed; do
         if ! command -v "$cmd" &> /dev/null; then
             echo "Error: Required command '$cmd' is not installed or not in your PATH." >&2
             missing=1
@@ -58,49 +106,40 @@ check_dependencies() {
     if [ "$missing" -eq 1 ]; then
         exit 1
     fi
-    echo "All dependencies (curl, jq, parallel) are present."
+    echo "All dependencies (curl, jq, parallel, sed) are present."
 }
 
-# Function to sanitize chromosome names
+# Function: convert_chromosome
+# Purpose: Normalize chromosome names to numerical format for API compatibility
+# Arguments: $1 - chromosome name (e.g., "chr1", "X", "23")
+# Returns: Numerical chromosome identifier (X->23, Y->24)
+# Note: Removes 'chr' prefix and handles sex chromosomes
 convert_chromosome() {
     local chrm=$1
     # Remove 'chr' prefix (case-insensitive) and convert to uppercase
     chrm=$(echo "$chrm" | sed -E 's/^chr//i' | tr '[:lower:]' '[:upper:]')
     case "$chrm" in
-        "X") echo "23" ;;
-        "Y") echo "24" ;;
-        *) echo "$chrm" ;;
+        "X") echo "23" ;;  # X chromosome -> 23 for API compatibility
+        "Y") echo "24" ;;  # Y chromosome -> 24 for API compatibility
+        *) echo "$chrm" ;; # Return as-is for autosomes
     esac
 }
 
-# Util function to return the smallest of two numbers
+# Function: min
+# Purpose: Mathematical utility to return the smaller of two integers
+# Arguments: $1, $2 - two integers to compare
+# Returns: The smaller value
 min() {
     echo $(( $1 < $2 ? $1 : $2 ))
 }
 
-# Function to generate a unique key for caching
+# Function: generate_cache_key
+# Purpose: Create a unique cache key from genomic coordinates
+# Arguments: $1 - chromosome, $2 - start position, $3 - end position
+# Returns: Cache key string in format "chrm_start_end"
+# Usage: Used to name cache files for API responses
 generate_cache_key() {
     echo "$1_$2_$3"
-}
-
-# Function to read a result from the cache file
-read_from_cache() {
-    local cache_file="$1"
-    local cache_key="$2"
-    if [ -f "$cache_file" ]; then
-        grep "^${cache_key}:" "$cache_file" | cut -d':' -f2-
-    fi
-}
-
-# Function to write a result to the cache file
-write_to_cache() {
-    local cache_file="$1"
-    local cache_key="$2"
-    local value="$3"
-    local cache_dir
-    cache_dir=$(dirname "$cache_file")
-    mkdir -p "$cache_dir"
-    echo "${cache_key}:${value}" >> "$cache_file"
 }
 
 # A portable and race-condition-safe rate-limiting function.
@@ -146,10 +185,106 @@ throttle_api_call() {
     done
 }
 
+# Function to process GWAS JSON data and compute summary statistics
+process_gwas_json() {
+    local gwas_json="$1"
+    local job_slot="$2"
+    local data_file
 
-# Main function to get GWAS data, i.e. number of unique variants,
-# minimum p-value with its corresponding odds-ratio, max odds-ratio, min
-# odds-ratio with their corresponding p-values.
+    data_file=$(mktemp)
+    # Ensure the temp file is removed on function exit
+    trap 'rm -f "$data_file"' RETURN
+
+    # Convert JSON array of associations to a TSV file for processing
+    echo "$gwas_json" | jq -r '.[] | select(try (.p_value|tonumber) catch false) | select(.p_value != -99) | [.variant_id, .p_value, .odds_ratio, .beta] | @tsv' > "$data_file"
+
+    # If no valid data, return NA for all fields
+    if [ ! -s "$data_file" ]; then
+        if [ "$VERBOSE" = true ]; then echo "[Job ${job_slot}] No valid association data found in JSON. Returning NA." >&2; fi
+        echo "NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA"
+        return
+    fi
+    
+    # Calculate number of unique variants
+    local unique_count
+    unique_count=$(cut -f1 "$data_file" | sort -u | wc -l | tr -d ' ')
+
+    # Find the minimum p-value and its corresponding odds ratio and beta
+    local min_p_line
+    min_p_line=$(cut -f2,3,4 "$data_file" | sort -t$'\t' -k1,1g | head -n1)
+    
+    local min_p_value="NA"
+    local odds_ratio_for_min_p="NA"
+    local beta_for_min_p="NA"
+
+    if [[ -n "$min_p_line" ]]; then
+        IFS=$'\t' read -r min_p_value or_val beta_val <<< "$min_p_line"
+        if [[ "$or_val" == "null" || -z "$or_val" ]]; then
+            odds_ratio_for_min_p="NA"
+        else
+            odds_ratio_for_min_p="$or_val"
+        fi
+        if [[ "$beta_val" == "null" || -z "$beta_val" ]]; then
+            beta_for_min_p="NA"
+        else
+            beta_for_min_p="$beta_val"
+        fi
+    fi
+
+    # Filter for valid odds ratio pairs to find min/max
+    local valid_or_pairs
+    valid_or_pairs=$(cut -f2,3 "$data_file" | grep -E $'\t[0-9.eE+-]+$')
+
+    local odds_ratio_min="NA"
+    local pval_for_min_or="NA"
+    local odds_ratio_max="NA"
+    local pval_for_max_or="NA"
+
+    if [ -n "$valid_or_pairs" ]; then
+        local sorted_or_pairs
+        sorted_or_pairs=$(echo "$valid_or_pairs" | sort -t$'\t' -k2,2g)
+        
+        local min_or_line
+        min_or_line=$(echo "$sorted_or_pairs" | head -n1)
+        IFS=$'\t' read -r pval_for_min_or odds_ratio_min <<< "$min_or_line"
+
+        local max_or_line
+        max_or_line=$(echo "$sorted_or_pairs" | tail -n1)
+        IFS=$'\t' read -r pval_for_max_or odds_ratio_max <<< "$max_or_line"
+    fi
+    
+    # Filter for valid beta pairs to find min/max
+    local valid_beta_pairs
+    valid_beta_pairs=$(cut -f2,4 "$data_file" | grep -E $'\t[0-9.eE+-]+$')
+
+    local beta_min="NA"
+    local pval_for_min_beta="NA"
+    local beta_max="NA"
+    local pval_for_max_beta="NA"
+
+    if [ -n "$valid_beta_pairs" ]; then
+        local sorted_beta_pairs
+        sorted_beta_pairs=$(echo "$valid_beta_pairs" | sort -t$'\t' -k2,2g)
+        
+        local min_beta_line
+        min_beta_line=$(echo "$sorted_beta_pairs" | head -n1)
+        IFS=$'\t' read -r pval_for_min_beta beta_min <<< "$min_beta_line"
+
+        local max_beta_line
+        max_beta_line=$(echo "$sorted_beta_pairs" | tail -n1)
+        IFS=$'\t' read -r pval_for_max_beta beta_max <<< "$max_beta_line"
+    fi
+
+    # Assemble the final result string
+    local final_result="${unique_count},${min_p_value},${odds_ratio_for_min_p},${beta_for_min_p},${odds_ratio_min},${pval_for_min_or},${odds_ratio_max},${pval_for_max_or},${beta_min},${pval_for_min_beta},${beta_max},${pval_for_max_beta}"
+    echo "$final_result"
+}
+
+
+# Main function to get GWAS data. It uses a file-based cache for full JSON
+# responses to avoid re-querying the API. It computes number of unique
+# variants, minimum p-value with its corresponding odds-ratio, max odds-ratio,
+# and min odds-ratio with their corresponding p-values.
 get_unique_gwas_variants() {
     local chrm
     local start_pos
@@ -162,33 +297,36 @@ get_unique_gwas_variants() {
     # Return immediately if input is invalid
     if [[ -z "$chrm" || "$chrm" == "NULL" || -z "$start_pos" || "$start_pos" == "0" ]]; then
         if [ "$VERBOSE" = true ]; then echo "[Job ${job_slot}] Invalid input for get_unique_gwas_variants: chrm='$chrm', start_pos='$start_pos', end_pos='$end_pos'. Skipping." >&2; fi
-        echo "NA,NA,NA,NA,NA,NA,NA"
+        echo "NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA"
         return
     fi
 
-    # Define cache file and key
-    local cache_file="../data/cache/gwas_variants_cache.txt"
+    # Define cache path and key
+    local cache_dir="../data/cache/gwas_responses"
+    mkdir -p "$cache_dir"
     local cache_key
     cache_key=$(generate_cache_key "$chrm" "$start_pos" "$end_pos")
+    local cache_file="${cache_dir}/${cache_key}.json"
 
     # Try to get results from cache
-    local cached_result
-    cached_result=$(read_from_cache "$cache_file" "$cache_key")
-    if [[ -n "$cached_result" ]]; then
-        if [ "$VERBOSE" = true ]; then echo "[Job ${job_slot}] Cache hit for key '$cache_key'. Result: $cached_result" >&2; fi
-        echo "$cached_result"
+    if [[ -f "$cache_file" ]]; then
+        if [ "$VERBOSE" = true ]; then echo "[Job ${job_slot}] Cache hit for key '$cache_key'. Processing cached JSON." >&2; fi
+        local all_responses
+        all_responses=$(cat "$cache_file")
+        # Extract associations from the cached full responses
+        local all_associations
+        all_associations=$(echo "$all_responses" | jq 'map(._embedded.associations // []) | add')
+        process_gwas_json "$all_associations" "$job_slot"
         return
     fi
     if [ "$VERBOSE" = true ]; then echo "[Job ${job_slot}] Cache miss for key '$cache_key'. Querying API." >&2; fi
 
-    local data_file
-    data_file=$(mktemp)
-    trap 'rm -f "$data_file"' RETURN
-
-    # API query logic with dynamic page size adjustment
+    # API query logic with pagination handling
     local max_page_size=500
     local current_page_size=$max_page_size
     local current_url="https://www.ebi.ac.uk/gwas/summary-statistics/api/chromosomes/${chrm}/associations?bp_lower=${start_pos}&bp_upper=${end_pos}&p_upper=5e-8&size=${current_page_size}"
+    local all_responses="[]"
+    local success=false
 
     while true; do
         if [ "$VERBOSE" = true ]; then echo "[Job ${job_slot}] Calling API with URL: $current_url" >&2; fi
@@ -209,7 +347,8 @@ get_unique_gwas_variants() {
                 break
             fi
 
-            echo "$gwas_response" | jq -r '(._embedded.associations // [])[] | select(try (.p_value|tonumber) catch false) | select(.p_value != -99) | [.variant_id, .p_value, .odds_ratio] | @tsv' >> "$data_file"
+            # Add the full JSON response to the list of responses
+            all_responses=$(jq -s '.[0] + [.[1]]' <(echo "$all_responses") <(echo "$gwas_response"))
             
             if [ "$current_page_size" -lt "$max_page_size" ]; then
                 current_page_size=$(min $((current_page_size + 10)) $max_page_size)
@@ -219,6 +358,7 @@ get_unique_gwas_variants() {
             next_url=$(echo "$gwas_response" | jq -r '._links.next.href // empty')
             if [[ -z "$next_url" ]]; then
                 if [ "$VERBOSE" = true ]; then echo "[Job ${job_slot}] No next page. Exiting API loop." >&2; fi
+                success=true
                 break
             fi
             current_url=$(echo "$next_url" | sed "s/size=[0-9]*/size=${current_page_size}/")
@@ -250,65 +390,36 @@ get_unique_gwas_variants() {
         fi
     done
 
-    if [ ! -s "$data_file" ]; then
-        if [ "$VERBOSE" = true ]; then echo "[Job ${job_slot}] No data collected for key '$cache_key'. Returning NA." >&2; fi
-        echo "NA,NA,NA,NA,NA,NA,NA"
-        return
-    fi
-    
-    local unique_count
-    unique_count=$(cut -f1 "$data_file" | sort -u | wc -l | tr -d ' ')
+    local all_associations
+    all_associations=$(echo "$all_responses" | jq 'map(._embedded.associations // []) | add')
 
-    local min_p_line
-    min_p_line=$(cut -f2,3 "$data_file" | sort -t$'\t' -k1,1g | head -n1)
-    
-    local min_p_value="NA"
-    local odds_ratio_for_min_p="NA"
-
-    if [[ -n "$min_p_line" ]]; then
-        IFS=$'\t' read -r min_p_value or_val <<< "$min_p_line"
-        if [[ "$or_val" == "null" || -z "$or_val" ]]; then
-            odds_ratio_for_min_p="NA"
-        else
-            odds_ratio_for_min_p="$or_val"
-        fi
+    # Write collected JSON to cache if the fetch was successful
+    if [ "$success" = true ]; then
+        echo "$all_responses" > "$cache_file"
+        if [ "$VERBOSE" = true ]; then echo "[Job ${job_slot}] Wrote response for key '$cache_key' to cache." >&2; fi
+    else
+        if [ "$VERBOSE" = true ]; then echo "[Job ${job_slot}] Did not write to cache for key '$cache_key' due to incomplete fetch." >&2; fi
     fi
 
-    local valid_or_pairs
-    valid_or_pairs=$(cut -f2,3 "$data_file" | grep -E $'\t[0-9.eE+-]+$')
-
-    local odds_ratio_min="NA"
-    local pval_for_min_or="NA"
-    local odds_ratio_max="NA"
-    local pval_for_max_or="NA"
-
-    if [ -n "$valid_or_pairs" ]; then
-        local sorted_or_pairs
-        sorted_or_pairs=$(echo "$valid_or_pairs" | sort -t$'\t' -k2,2g)
-        
-        local min_or_line
-        min_or_line=$(echo "$sorted_or_pairs" | head -n1)
-        IFS=$'\t' read -r pval_for_min_or odds_ratio_min <<< "$min_or_line"
-
-        local max_or_line
-        max_or_line=$(echo "$sorted_or_pairs" | tail -n1)
-        IFS=$'\t' read -r pval_for_max_or odds_ratio_max <<< "$max_or_line"
-    fi
-    
-    local final_result="${unique_count},${min_p_value},${odds_ratio_for_min_p},${odds_ratio_min},${pval_for_min_or},${odds_ratio_max},${pval_for_max_or}"
+    # Process the collected JSON to get the final result
+    local final_result
+    final_result=$(process_gwas_json "$all_associations" "$job_slot")
     if [ "$VERBOSE" = true ]; then echo "[Job ${job_slot}] Final result for key '$cache_key': $final_result" >&2; fi
-    
-    write_to_cache "$cache_file" "$cache_key" "$final_result"
-    if [ "$VERBOSE" = true ]; then echo "[Job ${job_slot}] Wrote result for key '$cache_key' to cache." >&2; fi
     
     echo "$final_result"
 }
 
 # Wrapper function to process a single line from the input CSV in parallel
 process_gwas_region_line() {
-    local line="$1"
+    local input_with_num="$1"
     local job_slot="$2" # Capture the job slot number
-    if [ "$VERBOSE" = true ]; then echo "[Job ${job_slot}] Processing line: $line" >&2; fi
+
+    # Robustly split the input (e.g., "2\tcontent...") into line number and content
+    # This is safer than using 'read' with IFS in some shell environments.
+    local line_num="${input_with_num%%$'\t'*}"
+    local line="${input_with_num#*$'\t'}"
+
+    if [ "$VERBOSE" = true ]; then echo "[Job ${job_slot}] Processing line number ${line_num}: $line" >&2; fi
     local -a fields
     IFS=',' read -r -a fields <<< "$line"
     
@@ -339,7 +450,7 @@ process_gwas_region_line() {
     tr_results=$(get_unique_gwas_variants "$tr_chrm" "$tr_start" "$tr_end" "$job_slot")
     if [ "$VERBOSE" = true ]; then echo "[Job ${job_slot}] Result for tr: $tr_results" >&2; fi
 
-    echo "${tl_exon1_results},${tl_exon2_results},${tl_results},${tr_results}"
+    echo "${line_num},${tl_exon1_results},${tl_exon2_results},${tl_results},${tr_results}"
 }
 
 ##############################################################
@@ -377,7 +488,11 @@ echo "Output will be written to: $output_path"
 # Add header to output file if it doesn't exist
 if [ ! -f "$output_file" ]; then
     echo "Creating new output file with header: $output_file"
-    echo "tl_exon1_gwas_associations,tl_exon1_min_p_value,tl_exon1_odds_ratio_for_min_p,tl_exon1_min_odds_ratio,tl_exon1_pval_for_min_or,tl_exon1_max_odds_ratio,tl_exon1_pval_for_max_or,tl_exon2_gwas_associations,tl_exon2_min_p_value,tl_exon2_odds_ratio_for_min_p,tl_exon2_min_odds_ratio,tl_exon2_pval_for_min_or,tl_exon2_max_odds_ratio,tl_exon2_pval_for_max_or,tl_gwas_assoc,tl_min_p_val,tl_odds_ratio_for_min_p,tl_min_odds_ratio,tl_pval_for_min_or,tl_max_odds_ratio,tl_pval_for_max_or,tr_gwas_assoc,tr_min_p_val,tr_odds_ratio_for_min_p,tr_min_odds_ratio,tr_pval_for_min_or,tr_max_odds_ratio,tr_pval_for_max_or" > "$output_file"
+    header="tl_exon1_gwas_associations,tl_exon1_min_p_value,tl_exon1_odds_ratio_for_min_p,tl_exon1_beta_for_min_p,tl_exon1_min_odds_ratio,tl_exon1_pval_for_min_or,tl_exon1_max_odds_ratio,tl_exon1_pval_for_max_or,tl_exon1_min_beta,tl_exon1_pval_for_min_beta,tl_exon1_max_beta,tl_exon1_pval_for_max_beta,"
+    header+="tl_exon2_gwas_associations,tl_exon2_min_p_value,tl_exon2_odds_ratio_for_min_p,tl_exon2_beta_for_min_p,tl_exon2_min_odds_ratio,tl_exon2_pval_for_min_or,tl_exon2_max_odds_ratio,tl_exon2_pval_for_max_or,tl_exon2_min_beta,tl_exon2_pval_for_min_beta,tl_exon2_max_beta,tl_exon2_pval_for_max_beta,"
+    header+="tl_gwas_assoc,tl_min_p_val,tl_odds_ratio_for_min_p,tl_beta_for_min_p,tl_min_odds_ratio,tl_pval_for_min_or,tl_max_odds_ratio,tl_pval_for_max_or,tl_min_beta,tl_pval_for_min_beta,tl_max_beta,tl_pval_for_max_beta,"
+    header+="tr_gwas_assoc,tr_min_p_val,tr_odds_ratio_for_min_p,tr_beta_for_min_p,tr_min_odds_ratio,tr_pval_for_min_or,tr_max_odds_ratio,tr_pval_for_max_or,tr_min_beta,tr_pval_for_min_beta,tr_max_beta,tr_pval_for_max_beta"
+    echo "$header" > "$output_file"
 fi
 
 # Check for previous runs to resume processing
@@ -399,11 +514,29 @@ export VERBOSE
 
 # Export functions
 export -f convert_chromosome get_unique_gwas_variants process_gwas_region_line \
-        generate_cache_key read_from_cache write_to_cache min throttle_api_call
+        generate_cache_key min throttle_api_call process_gwas_json
 
-# Start parallel processing
+# Define a temporary file for unordered results
+temp_output_file="${output_path}/${OUTPUT_NAME}.tmp"
+if [ -f "$temp_output_file" ]; then
+    echo "Removing old temporary file: $temp_output_file"
+    rm -f "$temp_output_file"
+fi
+
+# Start parallel processing without keeping order
 echo "Starting parallel processing... A log will be available at: $log_file"
-tail -n +${start_from_line} "$REGIONS_FILE" | tr -d '\r' | tr -dc '[:print:]\n' | parallel --keep-order --jobs 4 --joblog "$log_file" --eta "/bin/bash -c 'process_gwas_region_line \"\$1\" \"\$2\"' _ {} {%}" >> "$output_file"
+tail -n +${start_from_line} "$REGIONS_FILE" | tr -d '\r' | tr -dc '[:print:]\n' | sed 's/"//g' | \
+    nl -v "${start_from_line}" -w1 -s $'\t' | \
+    parallel --jobs 4 --joblog "$log_file" --eta "/bin/bash -c 'process_gwas_region_line \"\$1\" \"\$2\"' _ {} {%}" >> "$temp_output_file"
+
+# Sort the temporary file by line number, remove the line number, and append to the final output file
+if [ -f "$temp_output_file" ] && [ -s "$temp_output_file" ]; then
+    echo "Sorting results and finalizing output..."
+    sort -t, -k1,1n "$temp_output_file" | cut -d, -f2- >> "$output_file"
+    rm "$temp_output_file"
+else
+    echo "No new data was processed."
+fi
 
 echo
 echo "------------------------------------------------"
