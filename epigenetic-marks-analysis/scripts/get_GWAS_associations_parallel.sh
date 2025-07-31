@@ -7,7 +7,7 @@
 #   This script retrieves GWAS (Genome-Wide Association Studies) association data
 #   in parallel from the EBI GWAS Summary Statistics API. It processes genomic regions
 #   from CSV input files and extracts statistical measures including p-values,
-#   odds ratios, and beta coefficients for epigenetic marks analysis.
+#   odds ratios, and beta coefficients.
 #
 # FEATURES:
 #   - Parallel processing with GNU parallel for improved performance
