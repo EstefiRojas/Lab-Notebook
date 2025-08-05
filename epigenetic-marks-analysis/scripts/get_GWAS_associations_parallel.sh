@@ -50,8 +50,7 @@
 #   https://www.ebi.ac.uk/gwas/summary-statistics/api/
 #
 # AUTHOR: Estefania Rojas
-# VERSION: 1.0
-# DATE: $(date '+%Y-%m-%d')
+# DATE: 31 Jul 2025
 #
 ###############################################################################
 
@@ -59,14 +58,26 @@
 DATE=$(date "+%A %B %d, %Y")
 echo "Execution date: ${DATE}"
 
-# Default value for verbose
+# Default values for options
 VERBOSE=false
+OFFLINE_MODE=false
 
-# Parse options for verbose mode
-while getopts "v" opt; do
+# Parse options for verbose mode and offline mode
+while getopts "v-:" opt; do
   case ${opt} in
     v )
       VERBOSE=true
+      ;;
+    - )
+      case "${OPTARG}" in
+        offline-mode)
+          OFFLINE_MODE=true
+          ;;
+        *)
+          echo "Invalid option: --$OPTARG" 1>&2
+          exit 1
+          ;;
+      esac
       ;;
     \? )
       echo "Invalid option: -$OPTARG" 1>&2
@@ -76,16 +87,16 @@ while getopts "v" opt; do
 done
 shift $((OPTIND -1))
 
-# Enable execution tracing if -v flag is present
-#if [ "$VERBOSE" = true ]; then
-#    set -x
-#fi
-
-# Check for correct usage
+# Update the usage message
 if [ $# -ne 2 ]; then
-    echo "Usage: $0 [-v] <regions_to_extract.csv> <outname.csv>"
+    echo "Usage: $0 [-v] [--offline-mode] <regions_to_extract.csv> <outname.csv>"
+    echo "  -v              Enable verbose mode for detailed logging output"
+    echo "  --offline-mode  Only use cached data, never query the API"
     exit 1
 fi
+
+# Export the OFFLINE_MODE variable so it's available in subshells
+export OFFLINE_MODE
 
 ##############################################################
 # HELPER FUNCTIONS
@@ -144,7 +155,7 @@ generate_cache_key() {
 
 # A portable and race-condition-safe rate-limiting function.
 throttle_api_call() {
-    local max_calls_per_second=10
+    local max_calls_per_second=2
     local lock_dir="$LOCK_DIR"
     local stat_flags
     
@@ -196,12 +207,12 @@ process_gwas_json() {
     trap 'rm -f "$data_file"' RETURN
 
     # Convert JSON array of associations to a TSV file for processing
-    echo "$gwas_json" | jq -r '.[] | select(try (.p_value|tonumber) catch false) | select(.p_value != -99) | [.variant_id, .p_value, .odds_ratio, .beta] | @tsv' > "$data_file"
+    echo "$gwas_json" | jq -r '.[] | select(try (.p_value|tonumber) catch false) | select(.p_value != -99) | [.variant_id, .p_value, (.odds_ratio // "null"), (.beta // "null")] | @tsv' > "$data_file"
 
     # If no valid data, return NA for all fields
     if [ ! -s "$data_file" ]; then
         if [ "$VERBOSE" = true ]; then echo "[Job ${job_slot}] No valid association data found in JSON. Returning NA." >&2; fi
-        echo "NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA"
+        echo "NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA"
         return
     fi
     
@@ -297,7 +308,7 @@ get_unique_gwas_variants() {
     # Return immediately if input is invalid
     if [[ -z "$chrm" || "$chrm" == "NULL" || -z "$start_pos" || "$start_pos" == "0" ]]; then
         if [ "$VERBOSE" = true ]; then echo "[Job ${job_slot}] Invalid input for get_unique_gwas_variants: chrm='$chrm', start_pos='$start_pos', end_pos='$end_pos'. Skipping." >&2; fi
-        echo "NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA"
+        echo "NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA"
         return
     fi
 
@@ -319,6 +330,14 @@ get_unique_gwas_variants() {
         process_gwas_json "$all_associations" "$job_slot"
         return
     fi
+    
+    # Check if offline mode is enabled
+    if [ "$OFFLINE_MODE" = true ]; then
+        if [ "$VERBOSE" = true ]; then echo "[Job ${job_slot}] Offline mode enabled. Cache miss for key '$cache_key'. Returning NA values." >&2; fi
+        echo "NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA,NA"
+        return
+    fi
+
     if [ "$VERBOSE" = true ]; then echo "[Job ${job_slot}] Cache miss for key '$cache_key'. Querying API." >&2; fi
 
     # API query logic with pagination handling
