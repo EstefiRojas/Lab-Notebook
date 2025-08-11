@@ -76,7 +76,6 @@ plot_violin <- ggplot(data = filtered_df,
     fill = "Essentiality Group" # Update legend title to match 'fill'
   ) +
   
-  # Your custom theme remains the same
   theme_minimal() +
   theme(
     text = element_text(size = 28), # Adjusted size for better readability

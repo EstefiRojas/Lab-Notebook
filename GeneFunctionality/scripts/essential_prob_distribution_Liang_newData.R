@@ -98,7 +98,7 @@ plot_modified <- ggplot(data = filtered_df,
   # The fill color now comes from the main aes() mapping and scale_fill_manual().
   geom_point(data = ~ subset(., Essential_Status == "Shared"),
              #position = position_jitter(width = 0.25, height = 0), 
-             size = 5, 
+             size = 6, 
              shape = 21, 
              color = "black", # Manually set the BORDER color to black
              stroke = 1) +
@@ -116,6 +116,7 @@ plot_modified <- ggplot(data = filtered_df,
                                 "Partially shared" = "black", 
                                 "Non-essential" = "black"),
                      guide = "none") +
+  scale_x_discrete(labels = new_labels) +
   
   # 5. Override the legend glyph to be a filled circle
   # --- CHANGE #2: Added 'color = "black"' to make the legend key's border black ---
@@ -123,27 +124,23 @@ plot_modified <- ggplot(data = filtered_df,
   
   # 6. Update labels (No changes here)
   labs(
-    title = "Distribution of Functional Probability by Essentiality Group",
-    subtitle = "Liang et.al 2024",
+    title = "Gene Essentiality",
     x = "Essentiality Group",
-    y = "Functional Probability",
+    y = "lncRNA Probability",
     fill = "Essentiality Group"
   ) +
   
   # 7. Apply custom theme (No changes here)
   theme_minimal() +
   theme(
-    text = element_text(size = 18),
-    plot.title = element_text(size = 22, face = "bold"),
-    plot.subtitle = element_text(size = 18),
-    axis.text.x = element_text(angle = 45, hjust = 1, size = 14),
-    axis.text.y = element_text(size = 14),
-    axis.title = element_text(size = 16),
+    text = element_text(size = 36),
+    plot.title = element_text(size = 46, face = "bold", hjust = 0.5),
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 30),
+    axis.text.y = element_text(size = 30),
+    axis.title = element_text(size = 44),
     panel.grid.major = element_line(color = "gray90"),
     panel.grid.minor = element_blank(),
-    legend.title = element_text(size = 16),
-    legend.text = element_text(size = 14),
-    legend.position = "right"
+    legend.position = "none"
   )
 
 # Add the statistical comparison layer
@@ -152,7 +149,7 @@ plot_with_stats <- plot_modified +
     comparisons = my_comparisons,
     test = "ks_test_custom",
     step_increase = 0.2,
-    textsize = 6.5,
+    textsize = 9.5,
     tip_length = 0.01,
     y_position = 1.2
   ) +
