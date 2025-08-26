@@ -22,11 +22,12 @@ ess_d_join <- ess_d_join %>% mutate(max_prob = pmax(Probability_Functional.x, Pr
 table(ess_d_join$Essential_Status)
 
 # Define the desired order for the categorical variable
-essentiality_labels <- c("Non-essential", "Cell-type specific", "Partially shared", "Shared")
+essentiality_values <- c("Non-essential", "Cell-type specific", "Partially shared", "Shared")
+essentiality_labels <- c("Non", "Specific", "Partial", "Shared")
 
 # Reorder the 'Essential_Status' column by converting it to a factor with specified levels
 ess_d_join <- ess_d_join %>%
-  mutate(Essential_Status = factor(Essential_Status, levels = essentiality_labels))
+  mutate(Essential_Status = factor(Essential_Status, levels = essentiality_values, labels = essentiality_labels))
 
 # Keep only the max probability per GeneID
 filtered_df <- ess_d_join %>%
@@ -47,7 +48,7 @@ legend_data <- filtered_df %>%
 # The names of the vector are the original categories (e.g., "Essential")
 # The values are the new labels with counts (e.g., "Essential (n=1)")
 new_labels <- setNames(
-  paste0(legend_data$Essential_Status, " (", legend_data$n, ")"),
+  paste0(legend_data$Essential_Status, "\n(n=", legend_data$n, ")"),
   legend_data$Essential_Status
 )
 
@@ -56,8 +57,9 @@ new_labels <- setNames(
 
 # Define the pairwise comparisons to be performed
 #my_comparisons <- combn(essentiality_labels, 2, simplify = FALSE)
-my_comparisons <- list(c("Non-essential","Cell-type specific"),
-                       c("Non-essential","Partially shared"),c("Non-essential","Shared"))
+my_comparisons <- list(c("Non","Specific"),
+                       c("Non","Partial"),
+                       c("Non","Shared"))
 
 # Custom function to perform K-S test and format the D-statistic and p-value stars
 ks_test_custom <- function(x, y) {
@@ -75,57 +77,76 @@ ks_test_custom <- function(x, y) {
   return(list(p.value = label))
 }
 
-help("geom")
+
+# Compute KS stats
+
+# --- Step 1: Pre-calculate statistics for labels ---
+
+# Define your reference group and comparison groups
+reference_group <- "Non"
+comparison_groups <- c("Specific", "Partial", "Shared")
+
+# Extract the data for the reference group
+reference_data <- filtered_df %>%
+  filter(Essential_Status == reference_group) %>%
+  pull(max_prob)
+
+# Calculate KS statistic for each comparison group
+stats_list <- lapply(comparison_groups, function(group) {
+  # Extract data for the current comparison group
+  comparison_data <- filtered_df %>%
+    filter(Essential_Status == group) %>%
+    pull(max_prob)
+  
+  # Perform the KS test
+  ks_result <- ks.test(reference_data, comparison_data)
+  
+  # Return a data frame with the necessary info for plotting
+  data.frame(
+    Essential_Status = group,
+    label = paste0("KS=", round(ks_result$statistic, 2))
+  )
+})
+
+# Combine the list of data frames into a single data frame
+stats_labels <- do.call(rbind, stats_list)
+
+# Define the y-position for the labels (adjust as needed)
+stats_labels$y_position <- 1.1 
+
+
+#help("geom_boxplot")
 # 14 Jul 2025 #
-# The initial part of your script remains the same
-# We assume 'filtered_df', 'new_labels', 'my_comparisons',
-# and 'ks_test_custom' are already defined.
-
-
 # --- Start of the plot code ---
 plot_modified <- ggplot(data = filtered_df,
                         aes(x = Essential_Status, y = max_prob, 
                             fill = Essential_Status, color = Essential_Status)) +
   
-  # 1. Add violin and box plots (No changes here)
-  geom_violin(data = ~ subset(., Essential_Status != "Shared"),
-              scale = "area", na.rm = TRUE, trim = TRUE) +
-  geom_boxplot(data = ~ subset(., Essential_Status != "Shared"),
-               width = 0.1, alpha = 0.5, na.rm = TRUE, outlier.shape = NA) +
+  # 1. Add box plot
+  geom_boxplot(data = ~ subset(., Essential_Status != "Shared"), linewidth = 0.9,
+               na.rm = TRUE, outlier.shape = NA, color = "black", staplewidth = 0.5) +
   
   # 2. Add a jitter plot for the 'Shared' group
-  # --- CHANGE #1: Removed the manual 'fill' setting ---
-  # The fill color now comes from the main aes() mapping and scale_fill_manual().
   geom_point(data = ~ subset(., Essential_Status == "Shared"),
-             #position = position_jitter(width = 0.25, height = 0), 
              size = 6, 
              shape = 21, 
-             color = "black", # Manually set the BORDER color to black
+             color = "black",
              stroke = 1) +
   
-  # 3. Manually set fill colors (No changes here)
-  scale_fill_manual(values = c("Cell-type specific" = "#1a53ff", 
-                               "Shared" = "#b30000", # This now correctly colors the points AND the legend
-                               "Partially shared" = "#87bc45", 
-                               "Non-essential" = "#beb9db"),
-                    labels = new_labels) +
-  
-  # 4. Manually set border colors (No changes here)
-  scale_color_manual(values = c("Cell-type specific" = "black", 
-                                "Shared" = "#b30000",
-                                "Partially shared" = "black", 
-                                "Non-essential" = "black"),
-                     guide = "none") +
+  # 3. Manually set fill colors
+  scale_fill_brewer(palette = "Set2") +
+
+  # 4. Manually set border colors
+  scale_colour_brewer(palette = "Set2") +
+
   scale_x_discrete(labels = new_labels) +
   
   # 5. Override the legend glyph to be a filled circle
-  # --- CHANGE #2: Added 'color = "black"' to make the legend key's border black ---
   guides(fill = guide_legend(override.aes = list(shape = 21, size = 5, color = "black"))) +
   
   # 6. Update labels (No changes here)
   labs(
     title = "Gene Essentiality",
-    x = "Essentiality Group",
     y = "lncRNA Probability",
     fill = "Essentiality Group"
   ) +
@@ -134,33 +155,37 @@ plot_modified <- ggplot(data = filtered_df,
   theme_minimal() +
   theme(
     text = element_text(size = 36),
-    plot.title = element_text(size = 46, face = "bold", hjust = 0.5),
-    axis.text.x = element_text(angle = 45, hjust = 1, size = 30),
+    plot.title = element_text(size = 46, hjust = 0.5),
+    axis.text.x = element_text(hjust = 0.5, size = 30),
     axis.text.y = element_text(size = 30),
     axis.title = element_text(size = 44),
     panel.grid.major = element_line(color = "gray90"),
     panel.grid.minor = element_blank(),
-    legend.position = "none"
+    axis.title.x = element_blank(),
+    legend.position = "none",
+    panel.border = element_rect(colour = "black", fill = NA, size = 0.3)
   )
 
 # Add the statistical comparison layer
-plot_with_stats <- plot_modified +
-  geom_signif(
-    comparisons = my_comparisons,
-    test = "ks_test_custom",
-    step_increase = 0.2,
-    textsize = 9.5,
-    tip_length = 0.01,
-    y_position = 1.2
+plot_with_text_stats <- plot_modified +
+  
+  # Add the pre-calculated stats as text
+  geom_text(
+    data = stats_labels,
+    aes(x = Essential_Status, y = y_position, label = label),
+    inherit.aes = FALSE, 
+    size = 9.5,
+    color = "black",
+    fontface = "bold"
   ) +
-  # KEY CHANGE: Set explicit breaks for the y-axis and use coord_cartesian to set the visual range.
-  # This prevents nonsensical axis ticks (e.g., > 1) while keeping room for annotations.
+  
+  # Adjust y-axis limits to ensure text is visible
   scale_y_continuous(breaks = seq(0, 1, 0.2)) +
-  coord_cartesian(ylim = c(0, 1.7), clip = "off") # Use coord_cartesian to "zoom" without clipping annotations
-
+  coord_cartesian(ylim = c(0, 1.15), clip = "off") # Increased ylim slightly
 
 # Display the final plot
-print(plot_with_stats)
+print(plot_with_text_stats)
+
 
 
 # Generate a Jitter Plot
@@ -218,7 +243,33 @@ plot_with_stats <- plot_jitter +
 print(plot_with_stats)
 
 
+plot_scatter <- ggplot(data = ess_d_join,
+                       # Map x, y, and color aesthetics to the new factor
+                       aes(x = -selected, y = Probability_Functional, color = group_day14)) +
+  # Add points
+  geom_point(alpha = 1, size = 1.5) +
+  # Optional: Apply a specific color scale (e.g., ColorBrewer Set1)
+  # You might want scale_color_manual() to assign specific colors to "Essential" and "Non-essential"
+  # Add smooth trend lines (linear model 'lm' for each group)
+  # se = TRUE adds the confidence interval ribbon (default)
+  geom_smooth(method = "lm", se = TRUE, alpha = 0.15, linewidth = 1) + # Added trend line layer
+  scale_color_manual(values = c("Cell-type specific" ="#1a53ff", "Shared" = "#b30000", "Partially shared" = "#87bc45", "Non-essential" = "#beb9db")) +
+  #scale_color_brewer(palette = "Set1") +
+  labs(
+    title = "Functional Probability (exon1) vs gRNA Depletion Liang 2024", # Your title
+    x = "Sum depletion value day 14 and day7 (-log2 Scale)", # Your x-axis label
+    y = "Functional Probability", # Your y-axis label
+    color = "Essentiality Group" # Updated legend title
+  ) +
+  theme_minimal() +
+  theme(
+    text = element_text(size = 30), # Your text size
+    panel.grid.major = element_line(color = "gray90"), # Your grid lines
+    panel.grid.minor = element_line(color = "gray95"), # Your grid lines
+    legend.position = "right" # Optional: Move legend to bottom
+  )
 
+print(plot_scatter)
 
 
 
@@ -226,7 +277,7 @@ print(plot_with_stats)
 
 
 ##################################
-
+# OLD LIANG DATA
 essentials_data_w <- essentials_data_w %>%
   mutate(
     day7_sum_all = rowSums(

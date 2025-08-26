@@ -1,10 +1,10 @@
 #!/bin/bash
 # ===============================================
-# GWAS-lncRNA Multi-Region Association Analysis with BEDTools
+# GWAS ced set-lncRNA Multi-Region Association Analysis with BEDTools
 # ===============================================
 #
 # Description:
-#   This script performs genomic overlap analysis between GWAS variants
+#   This script performs genomic overlap analysis between GWAS ced set variants
 #   and multiple lncRNA regions (exons and transcript boundaries) using BEDTools.
 #
 # Requirements:
@@ -21,10 +21,10 @@
 #                         tl_exon2 (Chrm_Exon2): chr (13), start (14), end (15)
 #                         tl (Chrm_Transcript_Left): chr (16), start (17), end (18)
 #                         tr (Chrm_Transcript_Right): chr (19), start (20), end (21)
-#   gwas_catalog.tsv  - The full GWAS catalog data in TSV format
-#                       Expected columns: chr (12), position (13), p-value (28), beta (31), beta_desc (32)
-#   output_file.csv   - Output CSV with original lncRNA data plus statistics for each region:
-#                       SNP_count, min_p_value, max_abs_beta, and sum_beta
+#   gwas_cred_set.tsv  - The GWAS credible set data in TSV format from open_targets
+#                       Expected columns: chr (7), position (8), pip (15)
+#   output_file.csv   - Output CSV with original lncRNA data plus pip sum for each region:
+#                       sum_pip
 
 set -euo pipefail  # Exit on error, undefined variables, and pipe failures
 
@@ -54,7 +54,7 @@ check_command awk
 # Check arguments
 if [ "$#" -ne 3 ]; then
     error_exit "Invalid number of arguments.
-Usage: $0 <lncrna_file.csv> <gwas_catalog.tsv> <output_file.csv>"
+Usage: $0 <lncrna_file.csv> <gwas_cred_set.csv> <output_file.csv>"
 fi
 
 LNCRNA_FILE=$1
@@ -63,22 +63,15 @@ OUTPUT_FILE=$3
 
 # Check input files
 [ ! -f "$LNCRNA_FILE" ] && error_exit "lncRNA file '$LNCRNA_FILE' not found."
-[ ! -f "$GWAS_FILE" ] && error_exit "GWAS catalog file '$GWAS_FILE' not found."
-
-# --- Configuration ---
-THRESHOLD=5e-8
+[ ! -f "$GWAS_FILE" ] && error_exit "GWAS credible sets file '$GWAS_FILE' not found."
 
 # Create temporary files
 TEMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TEMP_DIR"' EXIT
 
-# Define region types for lncRNA
-#REGIONS=("tl_exon1" "tl_exon2" "tl" "tr")
-#REGION_COLS=(10 13 16 19)  # Starting column for each region (chr column)
-
-# Define region types for sncRNA
-REGIONS=("seq")
-REGION_COLS=(3)  # Starting column for each region (chr column)
+# Define region types
+REGIONS=("tl_exon1" "tl_exon2" "tl" "tr")
+REGION_COLS=(10 13 16 19)  # Starting column for each region (chr column)
 
 # Temporary files
 FILTERED_GWAS="$TEMP_DIR/gwas_filtered.bed"
@@ -148,98 +141,96 @@ for i in "${!REGIONS[@]}"; do
 done
 
 # Combine all regions into one BED file for summary
-#cat "$TEMP_DIR"/tl_exon1.bed "$TEMP_DIR"/tl_exon2.bed "$TEMP_DIR"/tl.bed "$TEMP_DIR"/tr.bed | sort -k1,1 -k2,2n > "$TEMP_DIR/all_regions.bed"
-cat "$TEMP_DIR"/seq.bed | sort -k1,1 -k2,2n > "$TEMP_DIR/all_regions.bed"
+cat "$TEMP_DIR"/tl_exon1.bed "$TEMP_DIR"/tl_exon2.bed "$TEMP_DIR"/tl.bed "$TEMP_DIR"/tr.bed | sort -k1,1 -k2,2n > "$TEMP_DIR/all_regions.bed"
 TOTAL_REGIONS=$(wc -l < "$TEMP_DIR/all_regions.bed")
 echo "  -> Total regions to analyze: $TOTAL_REGIONS"
 
 echo "Step 2: Filtering and converting GWAS data to BED format..."
-# Filter GWAS by p-value and convert to BED
-awk -F'\t' -v threshold="$THRESHOLD" '
-BEGIN {
-    # Convert scientific notation threshold to number
-    threshold_num = threshold + 0
-}
-NR > 1 {
+
+# First, determine the correct field separator based on file extension
+if [[ "$GWAS_FILE" == *.tsv ]]; then
+    FIELD_SEP='\t'
+    echo "  -> Detected TSV format for GWAS file"
+elif [[ "$GWAS_FILE" == *.csv ]]; then
+    FIELD_SEP=','
+    echo "  -> Detected CSV format for GWAS file"
+else
+    # Try to auto-detect by checking first line
+    if head -n 1 "$GWAS_FILE" | grep -q $'\t'; then
+        FIELD_SEP='\t'
+        echo "  -> Auto-detected TSV format for GWAS file"
+    else
+        FIELD_SEP=','
+        echo "  -> Auto-detected CSV format for GWAS file"
+    fi
+fi
+
+# Filter GWAS by p-value and convert to BED format
+awk -F"$FIELD_SEP" 'NR > 1 {
     # Get fields
-    chr = $12
-    pos = $13
-    pval = $28
-    pmlog = $29 # Use the maximum of this field to get minimum p-value
-    beta = $31  # Beta coefficient in column 31
-    beta_desc = $32  # Beta description in column 32
+    chr = $7
+    pos = $8
+    pip = $15  # pip of variant
+
+    # Remove any whitespace and carriage returns
+    gsub(/[[:space:]]+$/, "", chr)
+    gsub(/^[[:space:]]+/, "", chr)
+    gsub(/[[:space:]]+$/, "", pos)
+    gsub(/^[[:space:]]+/, "", pos)
+    gsub(/[[:space:]]+$/, "", pip)
+    gsub(/^[[:space:]]+/, "", pip)
+    gsub(/\r/, "", chr)
+    gsub(/\r/, "", pos)
+    gsub(/\r/, "", pip)
     
-    # Skip if essential fields are empty
-    if (chr == "" || pos == "" || pval == "") next
-    
-    # Convert p-value to number for comparison
-    pval_num = pval + 0
-    pmlog_num = pmlog + 0
-    
-    # Check p-value threshold
-    if (pval_num >= threshold_num) next
-    
-    # Normalize chromosome
-    gsub(/^chr/, "", chr)
-    
-    # Validate position is numeric
-    if (pos !~ /^[0-9]+$/) next
-    
-    pos_int = int(pos)
-    if (pos_int <= 0) next
-    
-    # Check if beta is valid based on description in column 32
-    valid_beta = 0
-    if (beta_desc ~ /unit decrease/ || beta_desc ~ /unit increase/) {
-        valid_beta = 1
+    # Debug: print first few lines
+    if (NR <= 3) {
+        print "     Debug GWAS line " NR ":" > "/dev/stderr"
+        print "       chr: [" chr "]" > "/dev/stderr"
+        print "       pos: [" pos "]" > "/dev/stderr"
+        print "       pip: [" pip "]" > "/dev/stderr"
     }
     
-    # Handle beta value - use "NA" if not valid or not numeric
-    if (!valid_beta || beta == "" || beta !~ /^[+-]?[0-9]*\.?[0-9]+([eE][+-]?[0-9]+)?$/) {
-        beta = "NA"
+    # Normalize chromosome (handle various formats)
+    gsub(/^chr/, "", chr)
+    gsub(/^CHR/, "", chr)
+    gsub(/^Chr/, "", chr)
+    
+    # Convert position to integer
+    pos_int = int(pos)
+    
+    
+    # Validate PIP (can be decimal or NA)
+    if (pip == "" || pip == "NA" || pip == "NULL") {
+        pip = "0"  # Default to 0 if missing
     }
     
     # Create BED entry (SNP position as single base)
-    # Format: chr start end name pvalue pmlog beta
-    printf "chr%s\t%d\t%d\tSNP_%d\t%s\t%s\t%s\n", chr, pos_int-1, pos_int, NR, pval, pmlog, beta
-}' "$GWAS_FILE" | sort -k1,1 -k2,2n > "$FILTERED_GWAS"
+    # Format: chr start end name pip
+    printf "chr%s\t%d\t%d\tSNP_%d\t%s\n", chr, pos_int-1, pos_int, NR, pip
+}' "$GWAS_FILE" | grep -v "^     Debug" | sort -k1,1 -k2,2n > "$FILTERED_GWAS"
 
 # Check if file is empty or has content
 if [ -s "$FILTERED_GWAS" ]; then
     GWAS_COUNT=$(wc -l < "$FILTERED_GWAS")
-    echo "  -> Found $GWAS_COUNT significant GWAS variants (p < $THRESHOLD)"
+    echo "  -> Found $GWAS_COUNT significant GWAS variants"
     
     # Debug: Show first few lines
     echo "  -> Sample GWAS BED entries:"
     head -n 3 "$FILTERED_GWAS" | sed 's/^/     /'
 else
     GWAS_COUNT=0
-    echo "  -> Found $GWAS_COUNT significant GWAS variants (p < $THRESHOLD)"
-fi
-
-if [ "$GWAS_COUNT" -eq 0 ]; then
-    echo "Warning: No GWAS variants passed the p-value threshold."
-    echo "Creating output with 0 counts and NA values..."
+    echo "  -> WARNING: No valid GWAS variants found!"
+    echo "  -> Checking raw GWAS file format..."
+    echo "     First 2 lines of GWAS file:"
+    head -n 2 "$GWAS_FILE" | sed 's/^/     /'
+    echo "     Total lines in GWAS file: $(wc -l < "$GWAS_FILE")"
     
-    # Add columns for all regions with 0 and NA
-    awk -F',' 'NR==1 {
-        # Remove any trailing whitespace and add new columns for each region
-        sub(/[[:space:]]*$/, "")
-        printf "%s", $0
-        printf ",seq_SNP_count,seq_min_p_value,seq_max_abs_beta,seq_sum_beta\n"
-    } 
-    NR>1 {
-        sub(/[[:space:]]*$/, "")
-        printf "%s", $0
-        # Add zeros and NAs for all four regions (4 columns each)
-        for (i=0; i<4; i++) {
-            printf ",0,NA,NA,NA"
-        }
-        printf "\n"
-    }' "$LNCRNA_FILE" > "$OUTPUT_FILE"
-    
-    echo "Done."
-    exit 0
+    # Additional debugging - check specific columns
+    echo "  -> Sampling column 7 (chr), 8 (pos), 15 (pip) from first 3 data rows:"
+    awk -F"$FIELD_SEP" 'NR > 1 && NR <= 4 {
+        print "     Row " (NR-1) ": chr=[" $7 "], pos=[" $8 "], pip=[" $15 "]"
+    }' "$GWAS_FILE"
 fi
 
 echo "Step 3: Finding overlaps for each region type..."
@@ -266,41 +257,26 @@ for REGION in "${REGIONS[@]}"; do
                     id = $4  # Format: linenum_regiontype
                     split(id, parts, "_")
                     line_num = parts[1]
-                    pval = $9
-                    pmlog = $10
-                    beta = $11
+                    pip = $9
                     
                     # Track counts
                     count[line_num]++
                     
-                    # Track minimum p-value
-                    if (!(line_num in min_pval) || pmlog > max_pmlog[line_num]) {
-                        min_pval[line_num] = pval
-                        max_pmlog[line_num] = pmlog
-                    }
-                    
                     # Track beta statistics if valid
-                    if (beta != "NA") {
-                        beta_val = beta + 0  # Convert to number
-                        abs_beta = (beta_val < 0) ? -beta_val : beta_val
-                        
-                        # Track maximum absolute beta value
-                        if (!(line_num in max_abs_beta) || abs_beta > max_abs_beta[line_num]) {
-                            max_abs_beta[line_num] = abs_beta
+                    if (pip != "NA") {
+                        pip_val = pip + 0  # Convert to number    
+                    
+                        # Track sum of pips
+                        if (!(line_num in sum_pip)) {
+                            sum_pip[line_num] = 0
                         }
-                        
-                        # Track sum of betas
-                        if (!(line_num in sum_beta)) {
-                            sum_beta[line_num] = 0
-                        }
-                        sum_beta[line_num] += abs_beta
+                        sum_pip[line_num] += pip_val
                     }
                 }
                 END {
                     for (ln in count) {
-                        max_beta = (ln in max_abs_beta) ? max_abs_beta[ln] : "NA"
-                        beta_sum = (ln in sum_beta) ? sum_beta[ln] : "NA"
-                        printf "%s\t%s\t%d\t%s\t%s\t%s\n", ln, region, count[ln], min_pval[ln], max_beta, beta_sum
+                        pip_sum = (ln in sum_pip) ? sum_pip[ln] : "NA"
+                        printf "%s\t%s\t%d\t%s\n", ln, region, count[ln], pip_sum
                     }
                 }' "$INTERSECT_FILE" >> "$ALL_STATS"
             else
@@ -322,10 +298,8 @@ awk -F',' -v stats_file="$ALL_STATS" 'BEGIN {
         region = arr[2]
         
         # Store stats indexed by line number and region
-        snp_count[line_num, region] = arr[3]
-        min_p[line_num, region] = arr[4]
-        max_beta[line_num, region] = arr[5]
-        sum_beta[line_num, region] = arr[6]
+        count[line_num, region] = arr[3]
+        sum_pip[line_num, region] = arr[4]
     }
     close(stats_file)
 }
@@ -333,7 +307,10 @@ NR==1 {
     # Print header with new columns for each region
     sub(/[[:space:]]*$/, "")
     printf "%s", $0
-    printf ",seq_SNP_count_ct,seq_min_p_value_ct,seq_max_abs_beta_ct,seq_sum_beta_ct\n"
+    printf ",tl_exon1_cred_set_count,tl_exon1_sum_pip"
+    printf ",tl_exon2_cred_set_count,tl_exon2_sum_pip"
+    printf ",tl_cred_set_count,tl_sum_pip"
+    printf ",tr_cred_set_count,tr_sum_pip\n"
     next
 }
 {
@@ -345,18 +322,19 @@ NR==1 {
     printf "%s", $0
     
     # Add statistics for each region
-    regions[1] = "seq"
+    regions[1] = "tl_exon1"
+    regions[2] = "tl_exon2"
+    regions[3] = "tl"
+    regions[4] = "tr"
     
     for (i=1; i<=4; i++) {
         region = regions[i]
         
         # Get values or set defaults
-        count = ((current_line, region) in snp_count) ? snp_count[current_line, region] : 0
-        pval = ((current_line, region) in min_p) ? min_p[current_line, region] : "NA"
-        beta_max = ((current_line, region) in max_beta) ? max_beta[current_line, region] : "NA"
-        beta_sum = ((current_line, region) in sum_beta) ? sum_beta[current_line, region] : "NA"
+        cred_set_count = ((current_line, region) in count) ? count[current_line, region] : "NA"
+        pip_sum = ((current_line, region) in sum_pip) ? sum_pip[current_line, region] : "NA"
         
-        printf ",%s,%s,%s,%s", count, pval, beta_max, beta_sum
+        printf ",%s,%s", cred_set_count, pip_sum
     }
     printf "\n"
 }' "$LNCRNA_FILE" > "$OUTPUT_FILE"
