@@ -22,7 +22,7 @@ HEATMAP_SELECT_FEATURES <- c("Random number","GC content", "low_complexity_densi
                              "phyloP max_241w", "phyloP max_100w", 
                              "GERP_91_mammals_max", "GERP_63_amniotes_max", 
                              "RPKM_tissue", "RPKM_primary cell", 
-                             "H3K79me2", "H3K9ac",
+                             "H3K9ac", "H3K79me1", "H3K79me2", 
                              "chromatin_acc", "methylome", 
                              "Repeat free", "Copy number", "RNAcode", 
                              "Fickett_score", "Max covariance", "MFE",
@@ -35,7 +35,7 @@ HEATMAP_SELECT_FEATURES_OLD_NAMES <- c("Random","GC_percentage", "lowComplexity_
                              "phyloP_max_241w", "phyloP_max_100w", 
                              "GERP_91_mammals_max", "GERP_63_amniotes_max", 
                              "RPKM_tissue", "RPKM_primary.cell", 
-                             "H3K9ac_MaxScaledSignal", "H3K79me2_MaxScaledSignal", 
+                             "H3K9ac_MaxScaledSignal", "H3K79me1_MaxScaledSignal", "H3K79me2_MaxScaledSignal", 
                              "chrm_acc_MaxScaledSignal", "methylome", 
                              "repeat_distance", "copy_number", "coding_potential", 
                              "fickett", "Max_covariance", "MFE",
@@ -46,7 +46,7 @@ HEATMAP_SELECT_FEATURES_LABELS <- c("Random number", "GC%", "Complexity",
                                     "PhyloP-mammals", "PhyloP-vertebrates",
                                     "GERP-mammals", "GERP-vertebrates",
                                     "Tissue RPKM", "Primary cell RPKM", 
-                                    "H3K9ac", "H3K79me2",
+                                    "H3K9ac", "H3K79me1", "H3K79me2",
                                     "Chromatin Accessibility", "Methylome",
                                     "Repeat free", "Copies", "RNAcode",
                                     "Fickett", "Covariance", "MFE",
@@ -219,16 +219,16 @@ ggcorrplot(prot_corr_matrix, type = "lower", method = "square", lab = TRUE,
   )
 
 # Save heatmap 
-ggsave("spearman_corr_protein_p&n.png",path = "../results/latest1000all/spearman/", scale = 3,  width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
+ggsave("spearman_corr_protein_p&n.png",path = "results/spearman_correlations/gene_features/", scale = 3,  width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
 
-write.csv(prot_corr_matrix, "../data/spearman_correlation/protein-correlation-matrix_p&n.csv",)
-write.csv(prot_p_values_adjusted, "../data/spearman_correlation/protein-correlation-p-adj_p&n.csv")
+write.csv(prot_corr_matrix, "results/spearman_correlations/gene_features/protein-correlation-matrix_p&n.csv",)
+write.csv(prot_p_values_adjusted, "results/spearman_correlations/gene_features/protein-correlation-p-adj_p&n.csv")
 
 protein_corr_matrix_melted <- melt(prot_corr_matrix)
 protein_p_values_adjusted_melted <- melt(prot_p_values_adjusted)
 
-write.csv(protein_corr_matrix_melted, "../data/spearman_correlation/protein-correlation-matrix_melted_p&n.csv")
-write.csv(protein_p_values_adjusted_melted, "../data/spearman_correlation/protein-correlation-p-adj_melt_p&n.csv")
+write.csv(protein_corr_matrix_melted, "results/spearman_correlations/gene_features/protein-correlation-matrix_melted_p&n.csv")
+write.csv(protein_p_values_adjusted_melted, "results/spearman_correlations/gene_features/protein-correlation-p-adj_melt_p&n.csv")
 
 
 # lncRNA #
@@ -272,16 +272,16 @@ ggcorrplot(lncrna_corr_matrix, type = "lower", method = "square", lab = TRUE,
     axis.text.x = element_text(size = 14),
     
   )
-ggsave("spearman_corr_lncrna_p&n.png",path = "../results/latest1000all/spearman/", scale = 3,  width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
+ggsave("spearman_corr_lncrna_p&n.png",path = "results/spearman_correlations/gene_features/", scale = 3,  width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
 
-write.csv(lncrna_corr_matrix, "../data/spearman_correlation/lncrna-correlation-matrix_p&n.csv")
-write.csv(lncrna_p_values_adjusted, "../data/spearman_correlation/lncrna-correlation-p-adj_p&n.csv")
+write.csv(lncrna_corr_matrix, "results/spearman_correlations/gene_features/lncrna-correlation-matrix_p&n.csv")
+write.csv(lncrna_p_values_adjusted, "results/spearman_correlations/gene_features/lncrna-correlation-p-adj_p&n.csv")
 
 lncrna_corr_matrix_melted <- melt(lncrna_corr_matrix)
 lncrna_p_values_adjusted_melted <- melt(lncrna_p_values_adjusted)
 
-write.csv(lncrna_corr_matrix_melted, "../data/spearman_correlation/lncrna-correlation-matrix_melted_p&n.csv")
-write.csv(lncrna_p_values_adjusted_melted, "../data/spearman_correlation/lncrna-correlation-p-adj_melt_p&n.csv")
+write.csv(lncrna_corr_matrix_melted, "results/spearman_correlations/gene_features/lncrna-correlation-matrix_melted_p&n.csv")
+write.csv(lncrna_p_values_adjusted_melted, "results/spearman_correlations/gene_features/lncrna-correlation-p-adj_melt_p&n.csv")
 
 
 # sncRNA #
@@ -322,16 +322,16 @@ ggcorrplot(sncrna_corr_matrix, type = "lower", method = "square", lab = TRUE,
     axis.text.x = element_text(size = 14),
     
   )
-ggsave("spearman_corr_sncrna_p&n.png",path = "../results/latest1000all/spearman/", scale = 3,  width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
+ggsave("spearman_corr_sncrna_p&n.png",path = "results/spearman_correlations/gene_features/", scale = 3,  width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
 
-write.csv(sncrna_corr_matrix, "../data/spearman_correlation/sncrna-correlation-matrix_p&n.csv")
-write.csv(sncrna_p_values_adjusted, "../data/spearman_correlation/sncrna-correlation-p-adj_p&n.csv")
+write.csv(sncrna_corr_matrix, "results/spearman_correlations/gene_features/sncrna-correlation-matrix_p&n.csv")
+write.csv(sncrna_p_values_adjusted, "results/spearman_correlations/gene_features/sncrna-correlation-p-adj_p&n.csv")
 
 sncrna_corr_matrix_melted <- melt(sncrna_corr_matrix)
 sncrna_p_values_adjusted_melted <- melt(sncrna_p_values_adjusted)
 
-write.csv(sncrna_corr_matrix_melted, "../data/spearman_correlation/sncrna-correlation-matrix_melted_p&n.csv")
-write.csv(sncrna_p_values_adjusted_melted, "../data/spearman_correlation/sncrna-correlation-p-adj_melt_p&n.csv")
+write.csv(sncrna_corr_matrix_melted, "results/spearman_correlations/gene_features/sncrna-correlation-matrix_melted_p&n.csv")
+write.csv(sncrna_p_values_adjusted_melted, "results/spearman_correlations/gene_features/sncrna-correlation-p-adj_melt_p&n.csv")
 
 
 

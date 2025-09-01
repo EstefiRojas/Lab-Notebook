@@ -46,8 +46,8 @@ PCA_20_SELECT_FEATURES <- c("GC_percentage",
                             "Max_covariance", "MFE",
                             "methylome",
                             "Interaction_ave", 
-                            "H3K9ac_MaxScaledSignal", "H3K79me2_MaxScaledSignal",
-                            "chrm_acc_MaxScaledSignal", "repeat_distance")
+                            "H3K9ac_MaxScaledSignal", "H3K79me2_MaxScaledSignal", "H3K79me1_MaxScaledSignal",
+                            "chrm_acc_MaxScaledSignal")#, "repeat_distance")
 
 PCA_20_SELECT_FEATURES_LABELS <- c("GC%",
                                    "CpG",  "GA", "TA",
@@ -58,8 +58,8 @@ PCA_20_SELECT_FEATURES_LABELS <- c("GC%",
                                    "Covariance", "MFE",
                                    "Methylome",
                                    "Interactions",
-                                   "H3K9ac", "H3K79me2",
-                                   "Chromatin", "Repeat free")
+                                   "H3K9ac", "H3K79me2", "H3K79me1",
+                                   "Chromatin")#, "Repeat free")
 
 # Select mRNA data
 prot_zscores_all <- rbind(zscores_all %>% filter(Dataset %in% c("protein-coding-exon2", "protein-coding-exon3")),
@@ -135,18 +135,70 @@ p_modified <- p + labs(y = "Contribution to PC6 Variance") + theme(text = elemen
 print(p_modified)
 
 # Biplot
-fviz_pca_var(allrna_pca, col.var = "cos2",
+fviz_pca_var(allrna_pca, 
+             axes = c(1, 2),
+             col.var = "cos2",
              gradient.cols = c("black", "orchid", "blue"),
              repel = TRUE,
              title = "Biplot - All RNA",
-             xlab = "PC1 (22.4%)",
-             ylab = "PC2 (12.1%)"
+             xlab = "PC1 (22.6%)",
+             ylab = "PC2 (12.3%)"
 ) +
   theme(
     text = element_text(size = 26)
   )
 
+fviz_pca_var(allrna_pca,
+             axes = c(1, 3), # This specifies plotting PC1 vs PC3
+             col.var = "cos2",
+             gradient.cols = c("black", "orchid", "blue"),
+             repel = TRUE,
+             title = "Biplot - All RNA",
+             xlab = "PC1 (22.6%)", # This remains the same
+             ylab = "PC3 (7.7%)"
+) +
+  theme(
+    text = element_text(size = 26)
+  )
 
+fviz_pca_var(allrna_pca,
+             axes = c(1, 4), # This specifies plotting PC1 vs PC4
+             col.var = "cos2",
+             gradient.cols = c("black", "orchid", "blue"),
+             repel = TRUE,
+             title = "Biplot - All RNA",
+             xlab = "PC1 (22.6%)", # This remains the same
+             ylab = "PC4 (7.0%)"
+) +
+  theme(
+    text = element_text(size = 26)
+  )
+
+fviz_pca_var(allrna_pca,
+             axes = c(1, 5), # This specifies plotting PC1 vs PC5
+             col.var = "cos2",
+             gradient.cols = c("black", "orchid", "blue"),
+             repel = TRUE,
+             title = "Biplot - All RNA",
+             xlab = "PC1 (22.6%)", # This remains the same
+             ylab = "PC5 (6.2%)"
+) +
+  theme(
+    text = element_text(size = 26)
+  )
+
+fviz_pca_var(allrna_pca,
+             axes = c(1, 6), # This specifies plotting PC1 vs PC6
+             col.var = "cos2",
+             gradient.cols = c("black", "orchid", "blue"),
+             repel = TRUE,
+             title = "Biplot - All RNA",
+             xlab = "PC1 (22.6%)", # This remains the same
+             ylab = "PC6 (5.3%)"
+) +
+  theme(
+    text = element_text(size = 26)
+  )
 
 #############################################
 # --- PCA Analisys on z-scores for mRNA --- #
@@ -217,25 +269,156 @@ df_density_pos_prot$`Gene type` <- factor(df_density_pos_prot$`Gene type`)
 df_density_neg_prot$`Gene type` <- c("mRNA(-)")
 df_density_neg_prot$`Gene type` <- factor(df_density_neg_prot$`Gene type`)
 
+# Define the colors and shapes you want to use
+my_colors <- c("mRNA(-)" = "#c9e3f6FF", "mRNA(+)" = "#F4A582FF")
+my_shapes <- c("mRNA(-)" = 4, "mRNA(+)" = 15)
+
 # Plot PCA
-pca_protein_plot <- ggplot(protein_pc_scores, aes(x = PC1, y = PC6, shape = `Gene type`, color = `Gene type`)) +
+pca_protein_plot <- ggplot(protein_pc_scores, aes(x = PC1, y = PC2, shape = `Gene type`, color = `Gene type`)) +
   geom_point(data = subset(protein_pc_scores, `Gene type` == "mRNA(-)"),
-             aes(x = PC1, y = PC6), shape = 4, color = "#c9e3f6FF", size = 4) +
+             aes(x = PC1, y = PC2), shape = 4, size = 4) +
   # Add semi-transparent density contours
-  geom_contour(data = df_density_neg_prot, aes(x = PC1, y = PC6, z = z), 
+  geom_contour(data = df_density_neg_prot, aes(x = PC1, y = PC2, z = z), 
                bins= 20, color = "#72b6e7", alpha = 0.6, linewidth = 1) +
   geom_point(data = subset(protein_pc_scores, `Gene type` == "mRNA(+)"),
-             aes(x = PC1, y = PC6), shape = 15, color = "#F4A582FF", size = 4) +
+             aes(x = PC1, y = PC2), shape = 15, size = 4) +
   # Add semi-transparent density contours for protein coding
-  geom_contour(data = df_density_pos_prot, aes(x = PC1, y = PC6, z = z), 
+  geom_contour(data = df_density_pos_prot, aes(x = PC1, y = PC2, z = z), 
                bins = 20, color = "#9c3a0e", alpha = 0.6, linewidth = 1) +
-  labs(subtitle="mRNA", x = "PC1 (22.4%)", y = "PC6 (5.3%)") +
+  # Use scale_manual functions
+  scale_color_manual(values = my_colors) +
+  scale_shape_manual(values = my_shapes) +
+  labs(subtitle="mRNA", x = "PC1 (22.6%)", y = "PC2 (12.3%)") +
   theme_minimal() +
   theme(
     plot.subtitle = element_text(size = 38, hjust = 0.5),  # Increase title size
     axis.title = element_text(size = 30),  # Increase axis title size
     axis.text = element_text(size = 26),    # Increase axis label size
-    legend.position = "none",
+    legend.position = "right",
+    legend.title = element_text(size = 30),  # Increase legend title size
+    legend.text = element_text(size = 28),   # Increase legend text size
+    legend.key.size = unit(2, "lines"),       # Increase legend key size
+    
+  ) +
+  xlim(-10, 5) +
+  ylim(-5, 5)
+pca_protein_plot
+ggsave(paste0(PCA_PROTEIN_20_FEATURES_LOADINGS_PLOT_FILE,"_pc2.png"), pca_protein_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
+
+pca_protein_plot <- ggplot(protein_pc_scores, aes(x = PC1, y = PC3, shape = `Gene type`, color = `Gene type`)) +
+  geom_point(data = subset(protein_pc_scores, `Gene type` == "mRNA(-)"),
+             aes(x = PC1, y = PC3), shape = 4, size = 4) +
+  # Add semi-transparent density contours
+  geom_contour(data = df_density_neg_prot, aes(x = PC1, y = PC3, z = z), 
+               bins= 20, color = "#72b6e7", alpha = 0.6, linewidth = 1) +
+  geom_point(data = subset(protein_pc_scores, `Gene type` == "mRNA(+)"),
+             aes(x = PC1, y = PC3), shape = 15, size = 4) +
+  # Add semi-transparent density contours for protein coding
+  geom_contour(data = df_density_pos_prot, aes(x = PC1, y = PC3, z = z), 
+               bins = 20, color = "#9c3a0e", alpha = 0.6, linewidth = 1) +
+  # Use scale_manual functions
+  scale_color_manual(values = my_colors) +
+  scale_shape_manual(values = my_shapes) +
+  labs(subtitle="mRNA", x = "PC1 (22.6%)", y = "PC3 (7.7%)") +
+  theme_minimal() +
+  theme(
+    plot.subtitle = element_text(size = 38, hjust = 0.5),  # Increase title size
+    axis.title = element_text(size = 30),  # Increase axis title size
+    axis.text = element_text(size = 26),    # Increase axis label size
+    legend.position = "right",
+    legend.title = element_text(size = 30),  # Increase legend title size
+    legend.text = element_text(size = 28),   # Increase legend text size
+    legend.key.size = unit(2, "lines"),       # Increase legend key size
+    
+  ) +
+  xlim(-10, 5) +
+  ylim(-5, 5)
+pca_protein_plot
+ggsave(paste0(PCA_PROTEIN_20_FEATURES_LOADINGS_PLOT_FILE,"_pc3.png"), pca_protein_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
+
+pca_protein_plot <- ggplot(protein_pc_scores, aes(x = PC1, y = PC4, shape = `Gene type`, color = `Gene type`)) +
+  geom_point(data = subset(protein_pc_scores, `Gene type` == "mRNA(-)"),
+             aes(x = PC1, y = PC4), shape = 4, size = 4) +
+  # Add semi-transparent density contours
+  geom_contour(data = df_density_neg_prot, aes(x = PC1, y = PC4, z = z), 
+               bins= 20, color = "#72b6e7", alpha = 0.6, linewidth = 1) +
+  geom_point(data = subset(protein_pc_scores, `Gene type` == "mRNA(+)"),
+             aes(x = PC1, y = PC4), shape = 15, size = 4) +
+  # Add semi-transparent density contours for protein coding
+  geom_contour(data = df_density_pos_prot, aes(x = PC1, y = PC4, z = z), 
+               bins = 20, color = "#9c3a0e", alpha = 0.6, linewidth = 1) +
+  # Use scale_manual functions
+  scale_color_manual(values = my_colors) +
+  scale_shape_manual(values = my_shapes) +
+  labs(subtitle="mRNA", x = "PC1 (22.6%)", y = "PC4 (7.0%)") +
+  theme_minimal() +
+  theme(
+    plot.subtitle = element_text(size = 38, hjust = 0.5),  # Increase title size
+    axis.title = element_text(size = 30),  # Increase axis title size
+    axis.text = element_text(size = 26),    # Increase axis label size
+    legend.position = "right",
+    legend.title = element_text(size = 30),  # Increase legend title size
+    legend.text = element_text(size = 28),   # Increase legend text size
+    legend.key.size = unit(2, "lines"),       # Increase legend key size
+    
+  ) +
+  xlim(-10, 5) +
+  ylim(-5, 5)
+pca_protein_plot
+ggsave(paste0(PCA_PROTEIN_20_FEATURES_LOADINGS_PLOT_FILE,"_pc4.png"), pca_protein_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
+
+pca_protein_plot <- ggplot(protein_pc_scores, aes(x = PC1, y = PC5, shape = `Gene type`, color = `Gene type`)) +
+  geom_point(data = subset(protein_pc_scores, `Gene type` == "mRNA(-)"),
+             aes(x = PC1, y = PC5), shape = 4, size = 4) +
+  # Add semi-transparent density contours
+  geom_contour(data = df_density_neg_prot, aes(x = PC1, y = PC5, z = z), 
+               bins= 20, color = "#72b6e7", alpha = 0.6, linewidth = 1) +
+  geom_point(data = subset(protein_pc_scores, `Gene type` == "mRNA(+)"),
+             aes(x = PC1, y = PC5), shape = 15, size = 4) +
+  # Add semi-transparent density contours for protein coding
+  geom_contour(data = df_density_pos_prot, aes(x = PC1, y = PC5, z = z), 
+               bins = 20, color = "#9c3a0e", alpha = 0.6, linewidth = 1) +
+  # Use scale_manual functions
+  scale_color_manual(values = my_colors) +
+  scale_shape_manual(values = my_shapes) +
+  labs(subtitle="mRNA", x = "PC1 (22.6%)", y = "PC5 (6.2%)") +
+  theme_minimal() +
+  theme(
+    plot.subtitle = element_text(size = 38, hjust = 0.5),  # Increase title size
+    axis.title = element_text(size = 30),  # Increase axis title size
+    axis.text = element_text(size = 26),    # Increase axis label size
+    legend.position = "right",
+    legend.title = element_text(size = 30),  # Increase legend title size
+    legend.text = element_text(size = 28),   # Increase legend text size
+    legend.key.size = unit(2, "lines"),       # Increase legend key size
+    
+  ) +
+  xlim(-10, 5) +
+  ylim(-5, 5)
+pca_protein_plot
+ggsave(paste0(PCA_PROTEIN_20_FEATURES_LOADINGS_PLOT_FILE,"_pc5.png"), pca_protein_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
+
+pca_protein_plot <- ggplot(protein_pc_scores, aes(x = PC1, y = PC6, shape = `Gene type`, color = `Gene type`)) +
+  geom_point(data = subset(protein_pc_scores, `Gene type` == "mRNA(-)"),
+             aes(x = PC1, y = PC6), shape = 4, size = 4) +
+  # Add semi-transparent density contours
+  geom_contour(data = df_density_neg_prot, aes(x = PC1, y = PC6, z = z), 
+               bins= 20, color = "#72b6e7", alpha = 0.6, linewidth = 1) +
+  geom_point(data = subset(protein_pc_scores, `Gene type` == "mRNA(+)"),
+             aes(x = PC1, y = PC6), shape = 15, size = 4) +
+  # Add semi-transparent density contours for protein coding
+  geom_contour(data = df_density_pos_prot, aes(x = PC1, y = PC6, z = z), 
+               bins = 20, color = "#9c3a0e", alpha = 0.6, linewidth = 1) +
+  # Use scale_manual functions
+  scale_color_manual(values = my_colors) +
+  scale_shape_manual(values = my_shapes) +
+  labs(subtitle="mRNA", x = "PC1 (22.6%)", y = "PC6 (5.3%)") +
+  theme_minimal() +
+  theme(
+    plot.subtitle = element_text(size = 38, hjust = 0.5),  # Increase title size
+    axis.title = element_text(size = 30),  # Increase axis title size
+    axis.text = element_text(size = 26),    # Increase axis label size
+    legend.position = "right",
     legend.title = element_text(size = 30),  # Increase legend title size
     legend.text = element_text(size = 28),   # Increase legend text size
     legend.key.size = unit(2, "lines"),       # Increase legend key size
@@ -362,25 +545,32 @@ df_density_pos_lncrna$`Gene type` <- factor(df_density_pos_lncrna$`Gene type`)
 df_density_neg_lncrna$`Gene type` <- c("lncRNA(-)")
 df_density_neg_lncrna$`Gene type` <- factor(df_density_neg_lncrna$`Gene type`)
 
+# Define the colors and shapes you want to use
+my_colors <- c("lncRNA(-)" = "#53a4f5FF", "lncRNA(+)" = "#e37b88FF")
+my_shapes <- c("lncRNA(-)" = 4, "lncRNA(+)" = 19)
+
 # Plot PCA
-pca_lncrna_plot <- ggplot(lncrna_pc_scores, aes(x = PC1, y = PC6, shape = `Gene type`, color = `Gene type`)) +
+pca_lncrna_plot <- ggplot(lncrna_pc_scores, aes(x = PC1, y = PC2, shape = `Gene type`, color = `Gene type`)) +
   geom_point(data = subset(lncrna_pc_scores, `Gene type` == "lncRNA(-)"),
-             aes(x = PC1, y = PC6), shape = 4, color = "#53a4f5FF", size = 4) +
+             aes(x = PC1, y = PC2), shape = 4, size = 4) +
   # Add semi-transparent density contours
-  geom_contour(data = df_density_neg_lncrna, aes(x = PC1, y = PC6, z = z), 
+  geom_contour(data = df_density_neg_lncrna, aes(x = PC1, y = PC2, z = z), 
                bins= 20, color = "#0c71d6", alpha = 0.6, linewidth = 1) +
   geom_point(data = subset(lncrna_pc_scores, `Gene type` == "lncRNA(+)"),
-             aes(x = PC1, y = PC6), shape = 19, color = "#e37b88FF", size = 4) +
+             aes(x = PC1, y = PC2), shape = 19, size = 4) +
   # Add semi-transparent density contours for lncRNA
-  geom_contour(data = df_density_pos_lncrna, aes(x = PC1, y = PC6, z = z), 
+  geom_contour(data = df_density_pos_lncrna, aes(x = PC1, y = PC2, z = z), 
                bins = 20, color = "#781a25", alpha = 0.6, linewidth = 1) +
-  labs(subtitle = "lncRNA", x = "PC1 (22.4%)", y = "PC6 (5.3%)") +
-  theme_minimal()+
+  # Use scale_manual functions
+  scale_color_manual(values = my_colors) +
+  scale_shape_manual(values = my_shapes) +
+  labs(subtitle = "lncRNA", x = "PC1 (22.6%)", y = "PC2 (12.3%)") +
+  theme_minimal() +
   theme(
     plot.subtitle = element_text(size = 38, hjust = 0.5),  # Increase title size
     axis.title = element_text(size = 30),  # Increase axis title size
     axis.text = element_text(size = 26),    # Increase axis label size
-    legend.position = "none",
+    legend.position = "right",
     legend.title = element_text(size = 30),  # Increase legend title size
     legend.text = element_text(size = 28),   # Increase legend text size
     legend.key.size = unit(2, "lines"),       # Increase legend key size
@@ -388,7 +578,131 @@ pca_lncrna_plot <- ggplot(lncrna_pc_scores, aes(x = PC1, y = PC6, shape = `Gene 
   xlim(-10, 5) + 
   ylim(-5, 5)
 pca_lncrna_plot
-ggsave(paste0(PCA_LNCRNA_20_FEATURES_LOADINGS_PLOT_FILE,"_pc.png"), pca_lncrna_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
+ggsave(paste0(PCA_LNCRNA_20_FEATURES_LOADINGS_PLOT_FILE,"_pc2.png"), pca_lncrna_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
+
+# Plot PCA
+pca_lncrna_plot <- ggplot(lncrna_pc_scores, aes(x = PC1, y = PC3, shape = `Gene type`, color = `Gene type`)) +
+  geom_point(data = subset(lncrna_pc_scores, `Gene type` == "lncRNA(-)"),
+             aes(x = PC1, y = PC3), shape = 4, size = 4) +
+  # Add semi-transparent density contours
+  geom_contour(data = df_density_neg_lncrna, aes(x = PC1, y = PC3, z = z), 
+               bins= 20, color = "#0c71d6", alpha = 0.6, linewidth = 1) +
+  geom_point(data = subset(lncrna_pc_scores, `Gene type` == "lncRNA(+)"),
+             aes(x = PC1, y = PC3), shape = 19, size = 4) +
+  # Add semi-transparent density contours for lncRNA
+  geom_contour(data = df_density_pos_lncrna, aes(x = PC1, y = PC3, z = z), 
+               bins = 20, color = "#781a25", alpha = 0.6, linewidth = 1) +
+  # Use scale_manual functions
+  scale_color_manual(values = my_colors) +
+  scale_shape_manual(values = my_shapes) +
+  labs(subtitle = "lncRNA", x = "PC1 (22.6%)", y = "PC3 (7.7%)") +
+  theme_minimal() +
+  theme(
+    plot.subtitle = element_text(size = 38, hjust = 0.5),  # Increase title size
+    axis.title = element_text(size = 30),  # Increase axis title size
+    axis.text = element_text(size = 26),    # Increase axis label size
+    legend.position = "right",
+    legend.title = element_text(size = 30),  # Increase legend title size
+    legend.text = element_text(size = 28),   # Increase legend text size
+    legend.key.size = unit(2, "lines"),       # Increase legend key size
+  ) +
+  xlim(-10, 5) + 
+  ylim(-5, 5)
+pca_lncrna_plot
+ggsave(paste0(PCA_LNCRNA_20_FEATURES_LOADINGS_PLOT_FILE,"_pc3.png"), pca_lncrna_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
+
+# Plot PCA
+pca_lncrna_plot <- ggplot(lncrna_pc_scores, aes(x = PC1, y = PC4, shape = `Gene type`, color = `Gene type`)) +
+  geom_point(data = subset(lncrna_pc_scores, `Gene type` == "lncRNA(-)"),
+             aes(x = PC1, y = PC4), shape = 4, size = 4) +
+  # Add semi-transparent density contours
+  geom_contour(data = df_density_neg_lncrna, aes(x = PC1, y = PC4, z = z), 
+               bins= 20, color = "#0c71d6", alpha = 0.6, linewidth = 1) +
+  geom_point(data = subset(lncrna_pc_scores, `Gene type` == "lncRNA(+)"),
+             aes(x = PC1, y = PC4), shape = 19, size = 4) +
+  # Add semi-transparent density contours for lncRNA
+  geom_contour(data = df_density_pos_lncrna, aes(x = PC1, y = PC4, z = z), 
+               bins = 20, color = "#781a25", alpha = 0.6, linewidth = 1) +
+  # Use scale_manual functions
+  scale_color_manual(values = my_colors) +
+  scale_shape_manual(values = my_shapes) +
+  labs(subtitle = "lncRNA", x = "PC1 (22.6%)", y = "PC4 (7.0%)") +
+  theme_minimal() +
+  theme(
+    plot.subtitle = element_text(size = 38, hjust = 0.5),  # Increase title size
+    axis.title = element_text(size = 30),  # Increase axis title size
+    axis.text = element_text(size = 26),    # Increase axis label size
+    legend.position = "right",
+    legend.title = element_text(size = 30),  # Increase legend title size
+    legend.text = element_text(size = 28),   # Increase legend text size
+    legend.key.size = unit(2, "lines"),       # Increase legend key size
+  ) +
+  xlim(-10, 5) + 
+  ylim(-5, 5)
+pca_lncrna_plot
+ggsave(paste0(PCA_LNCRNA_20_FEATURES_LOADINGS_PLOT_FILE,"_pc4.png"), pca_lncrna_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
+
+# Plot PCA
+pca_lncrna_plot <- ggplot(lncrna_pc_scores, aes(x = PC1, y = PC5, shape = `Gene type`, color = `Gene type`)) +
+  geom_point(data = subset(lncrna_pc_scores, `Gene type` == "lncRNA(-)"),
+             aes(x = PC1, y = PC5), shape = 4, size = 4) +
+  # Add semi-transparent density contours
+  geom_contour(data = df_density_neg_lncrna, aes(x = PC1, y = PC5, z = z), 
+               bins= 20, color = "#0c71d6", alpha = 0.6, linewidth = 1) +
+  geom_point(data = subset(lncrna_pc_scores, `Gene type` == "lncRNA(+)"),
+             aes(x = PC1, y = PC5), shape = 19, size = 4) +
+  # Add semi-transparent density contours for lncRNA
+  geom_contour(data = df_density_pos_lncrna, aes(x = PC1, y = PC5, z = z), 
+               bins = 20, color = "#781a25", alpha = 0.6, linewidth = 1) +
+  # Use scale_manual functions
+  scale_color_manual(values = my_colors) +
+  scale_shape_manual(values = my_shapes) +
+  labs(subtitle = "lncRNA", x = "PC1 (22.6%)", y = "PC5 (6.2%)") +
+  theme_minimal() +
+  theme(
+    plot.subtitle = element_text(size = 38, hjust = 0.5),  # Increase title size
+    axis.title = element_text(size = 30),  # Increase axis title size
+    axis.text = element_text(size = 26),    # Increase axis label size
+    legend.position = "right",
+    legend.title = element_text(size = 30),  # Increase legend title size
+    legend.text = element_text(size = 28),   # Increase legend text size
+    legend.key.size = unit(2, "lines"),       # Increase legend key size
+  ) +
+  xlim(-10, 5) + 
+  ylim(-5, 5)
+pca_lncrna_plot
+ggsave(paste0(PCA_LNCRNA_20_FEATURES_LOADINGS_PLOT_FILE,"_pc5.png"), pca_lncrna_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
+
+# Plot PCA
+pca_lncrna_plot <- ggplot(lncrna_pc_scores, aes(x = PC1, y = PC6, shape = `Gene type`, color = `Gene type`)) +
+  geom_point(data = subset(lncrna_pc_scores, `Gene type` == "lncRNA(-)"),
+             aes(x = PC1, y = PC6), shape = 4, size = 4) +
+  # Add semi-transparent density contours
+  geom_contour(data = df_density_neg_lncrna, aes(x = PC1, y = PC6, z = z), 
+               bins= 20, color = "#0c71d6", alpha = 0.6, linewidth = 1) +
+  geom_point(data = subset(lncrna_pc_scores, `Gene type` == "lncRNA(+)"),
+             aes(x = PC1, y = PC6), shape = 19, size = 4) +
+  # Add semi-transparent density contours for lncRNA
+  geom_contour(data = df_density_pos_lncrna, aes(x = PC1, y = PC6, z = z), 
+               bins = 20, color = "#781a25", alpha = 0.6, linewidth = 1) +
+  # Use scale_manual functions
+  scale_color_manual(values = my_colors) +
+  scale_shape_manual(values = my_shapes) +
+  labs(subtitle = "lncRNA", x = "PC1 (22.6%)", y = "PC6 (5.3%)") +
+  theme_minimal() +
+  theme(
+    plot.subtitle = element_text(size = 38, hjust = 0.5),  # Increase title size
+    axis.title = element_text(size = 30),  # Increase axis title size
+    axis.text = element_text(size = 26),    # Increase axis label size
+    legend.position = "right",
+    legend.title = element_text(size = 30),  # Increase legend title size
+    legend.text = element_text(size = 28),   # Increase legend text size
+    legend.key.size = unit(2, "lines"),       # Increase legend key size
+  ) +
+  xlim(-10, 5) + 
+  ylim(-5, 5)
+pca_lncrna_plot
+ggsave(paste0(PCA_LNCRNA_20_FEATURES_LOADINGS_PLOT_FILE,"_pc6.png"), pca_lncrna_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
 
 # Change colnames
 #colnames(lncrna_data_normalized) <- c(PCA_20_SELECT_FEATURES_LABELS, "Dataset")
@@ -511,25 +825,161 @@ df_density_pos_sncrna$`Gene type` <- c("sncRNA(+)")
 df_density_pos_sncrna$`Gene type` <- factor(df_density_pos_sncrna$`Gene type`)
 df_density_neg_sncrna$`Gene type` <- c("sncRNA(-)")
 df_density_neg_sncrna$`Gene type` <- factor(df_density_neg_sncrna$`Gene type`)
+
+# Define the colors and shapes you want to use
+my_colors <- c("sncRNA(-)" = "#56bdfcFF", "sncRNA(+)" = "#D6604DFF")
+my_shapes <- c("sncRNA(-)" = 4, "sncRNA(+)" = 17)
+
 # Plot PCA
-pca_sncrna_plot <- ggplot(sncrna_pc_scores, aes(x = PC1, y = PC6, shape = `Gene type`, color = `Gene type`)) +
+pca_sncrna_plot <- ggplot(sncrna_pc_scores, aes(x = PC1, y = PC2, shape = `Gene type`, color = `Gene type`)) +
   geom_point(data = subset(sncrna_pc_scores, `Gene type` == "sncRNA(-)"),
-             aes(x = PC1, y = PC6), shape = 4, color = "#56bdfcFF", size = 4) +
+             aes(x = PC1, y = PC2), shape = 4, size = 4) +
   # Add semi-transparent density contours
-  geom_contour(data = df_density_neg_sncrna, aes(x = PC1, y = PC6, z = z), 
+  geom_contour(data = df_density_neg_sncrna, aes(x = PC1, y = PC2, z = z), 
                bins= 20, color = "#0491e8", alpha = 0.6, linewidth = 1) +
   geom_point(data = subset(sncrna_pc_scores, `Gene type` == "sncRNA(+)"),
-             aes(x = PC1, y = PC6), shape = 17, color = "#D6604DFF", size = 4) +
+             aes(x = PC1, y = PC2), shape = 17, size = 4) +
   # Add semi-transparent density contours for sncRNA
-  geom_contour(data = df_density_pos_sncrna, aes(x = PC1, y = PC6, z = z), 
+  geom_contour(data = df_density_pos_sncrna, aes(x = PC1, y = PC2, z = z), 
                bins = 20, color = "#471810", alpha = 0.6, linewidth = 1) +
-  labs(subtitle = "sncRNA", x = "PC1 (22.4%)", y = "PC6 (5.3%)") +
+  # Use scale_manual functions
+  scale_color_manual(values = my_colors) +
+  scale_shape_manual(values = my_shapes) +
+  labs(subtitle = "sncRNA", x = "PC1 (22.6%)", y = "PC2 (12.3%)") +
   theme_minimal()+
   theme(
     plot.subtitle = element_text(size = 38, hjust = 0.5),  # Increase title size
     axis.title = element_text(size = 30),  # Increase axis title size
     axis.text = element_text(size = 26),    # Increase axis label size
-    legend.position = "none",
+    legend.position = "right",
+    legend.title = element_text(size = 30),  # Increase legend title size
+    legend.text = element_text(size = 28),   # Increase legend text size
+    legend.key.size = unit(2, "lines"),       # Increase legend key size
+    
+  ) +
+  xlim(-10, 5) +
+  ylim(-5, 5)
+pca_sncrna_plot
+ggsave(paste0(PCA_SNCRNA_20_FEATURES_LOADINGS_PLOT_FILE,"_pc2.png"), pca_sncrna_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
+
+# Plot PCA
+pca_sncrna_plot <- ggplot(sncrna_pc_scores, aes(x = PC1, y = PC3, shape = `Gene type`, color = `Gene type`)) +
+  geom_point(data = subset(sncrna_pc_scores, `Gene type` == "sncRNA(-)"),
+             aes(x = PC1, y = PC3), shape = 4, size = 4) +
+  # Add semi-transparent density contours
+  geom_contour(data = df_density_neg_sncrna, aes(x = PC1, y = PC3, z = z), 
+               bins= 20, color = "#0491e8", alpha = 0.6, linewidth = 1) +
+  geom_point(data = subset(sncrna_pc_scores, `Gene type` == "sncRNA(+)"),
+             aes(x = PC1, y = PC3), shape = 17, size = 4) +
+  # Add semi-transparent density contours for sncRNA
+  geom_contour(data = df_density_pos_sncrna, aes(x = PC1, y = PC3, z = z), 
+               bins = 20, color = "#471810", alpha = 0.6, linewidth = 1) +
+  # Use scale_manual functions
+  scale_color_manual(values = my_colors) +
+  scale_shape_manual(values = my_shapes) +
+  labs(subtitle = "sncRNA", x = "PC1 (22.6%)", y = "PC3 (7.7%)") +
+  theme_minimal()+
+  theme(
+    plot.subtitle = element_text(size = 38, hjust = 0.5),  # Increase title size
+    axis.title = element_text(size = 30),  # Increase axis title size
+    axis.text = element_text(size = 26),    # Increase axis label size
+    legend.position = "right",
+    legend.title = element_text(size = 30),  # Increase legend title size
+    legend.text = element_text(size = 28),   # Increase legend text size
+    legend.key.size = unit(2, "lines"),       # Increase legend key size
+    
+  ) +
+  xlim(-10, 5) +
+  ylim(-5, 5)
+pca_sncrna_plot
+ggsave(paste0(PCA_SNCRNA_20_FEATURES_LOADINGS_PLOT_FILE,"_pc3.png"), pca_sncrna_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
+
+# Plot PCA
+pca_sncrna_plot <- ggplot(sncrna_pc_scores, aes(x = PC1, y = PC4, shape = `Gene type`, color = `Gene type`)) +
+  geom_point(data = subset(sncrna_pc_scores, `Gene type` == "sncRNA(-)"),
+             aes(x = PC1, y = PC4), shape = 4, size = 4) +
+  # Add semi-transparent density contours
+  geom_contour(data = df_density_neg_sncrna, aes(x = PC1, y = PC4, z = z), 
+               bins= 20, color = "#0491e8", alpha = 0.6, linewidth = 1) +
+  geom_point(data = subset(sncrna_pc_scores, `Gene type` == "sncRNA(+)"),
+             aes(x = PC1, y = PC4), shape = 17, size = 4) +
+  # Add semi-transparent density contours for sncRNA
+  geom_contour(data = df_density_pos_sncrna, aes(x = PC1, y = PC4, z = z), 
+               bins = 20, color = "#471810", alpha = 0.6, linewidth = 1) +
+  # Use scale_manual functions
+  scale_color_manual(values = my_colors) +
+  scale_shape_manual(values = my_shapes) +
+  labs(subtitle = "sncRNA", x = "PC1 (22.6%)", y = "PC4 (7.0%)") +
+  theme_minimal()+
+  theme(
+    plot.subtitle = element_text(size = 38, hjust = 0.5),  # Increase title size
+    axis.title = element_text(size = 30),  # Increase axis title size
+    axis.text = element_text(size = 26),    # Increase axis label size
+    legend.position = "right",
+    legend.title = element_text(size = 30),  # Increase legend title size
+    legend.text = element_text(size = 28),   # Increase legend text size
+    legend.key.size = unit(2, "lines"),       # Increase legend key size
+    
+  ) +
+  xlim(-10, 5) +
+  ylim(-5, 5)
+pca_sncrna_plot
+ggsave(paste0(PCA_SNCRNA_20_FEATURES_LOADINGS_PLOT_FILE,"_pc4.png"), pca_sncrna_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
+
+# Plot PCA
+pca_sncrna_plot <- ggplot(sncrna_pc_scores, aes(x = PC1, y = PC5, shape = `Gene type`, color = `Gene type`)) +
+  geom_point(data = subset(sncrna_pc_scores, `Gene type` == "sncRNA(-)"),
+             aes(x = PC1, y = PC5), shape = 4, size = 4) +
+  # Add semi-transparent density contours
+  geom_contour(data = df_density_neg_sncrna, aes(x = PC1, y = PC5, z = z), 
+               bins= 20, color = "#0491e8", alpha = 0.6, linewidth = 1) +
+  geom_point(data = subset(sncrna_pc_scores, `Gene type` == "sncRNA(+)"),
+             aes(x = PC1, y = PC5), shape = 17, size = 4) +
+  # Add semi-transparent density contours for sncRNA
+  geom_contour(data = df_density_pos_sncrna, aes(x = PC1, y = PC5, z = z), 
+               bins = 20, color = "#471810", alpha = 0.6, linewidth = 1) +
+  # Use scale_manual functions
+  scale_color_manual(values = my_colors) +
+  scale_shape_manual(values = my_shapes) +
+  labs(subtitle = "sncRNA", x = "PC1 (22.6%)", y = "PC5 (6.2%)") +
+  theme_minimal()+
+  theme(
+    plot.subtitle = element_text(size = 38, hjust = 0.5),  # Increase title size
+    axis.title = element_text(size = 30),  # Increase axis title size
+    axis.text = element_text(size = 26),    # Increase axis label size
+    legend.position = "right",
+    legend.title = element_text(size = 30),  # Increase legend title size
+    legend.text = element_text(size = 28),   # Increase legend text size
+    legend.key.size = unit(2, "lines"),       # Increase legend key size
+    
+  ) +
+  xlim(-10, 5) +
+  ylim(-5, 5)
+pca_sncrna_plot
+ggsave(paste0(PCA_SNCRNA_20_FEATURES_LOADINGS_PLOT_FILE,"_pc5.png"), pca_sncrna_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
+
+# Plot PCA
+pca_sncrna_plot <- ggplot(sncrna_pc_scores, aes(x = PC1, y = PC6, shape = `Gene type`, color = `Gene type`)) +
+  geom_point(data = subset(sncrna_pc_scores, `Gene type` == "sncRNA(-)"),
+             aes(x = PC1, y = PC6), shape = 4, size = 4) +
+  # Add semi-transparent density contours
+  geom_contour(data = df_density_neg_sncrna, aes(x = PC1, y = PC6, z = z), 
+               bins= 20, color = "#0491e8", alpha = 0.6, linewidth = 1) +
+  geom_point(data = subset(sncrna_pc_scores, `Gene type` == "sncRNA(+)"),
+             aes(x = PC1, y = PC6), shape = 17, size = 4) +
+  # Add semi-transparent density contours for sncRNA
+  geom_contour(data = df_density_pos_sncrna, aes(x = PC1, y = PC6, z = z), 
+               bins = 20, color = "#471810", alpha = 0.6, linewidth = 1) +
+  # Use scale_manual functions
+  scale_color_manual(values = my_colors) +
+  scale_shape_manual(values = my_shapes) +
+  labs(subtitle = "sncRNA", x = "PC1 (22.6%)", y = "PC6 (5.3%)") +
+  theme_minimal()+
+  theme(
+    plot.subtitle = element_text(size = 38, hjust = 0.5),  # Increase title size
+    axis.title = element_text(size = 30),  # Increase axis title size
+    axis.text = element_text(size = 26),    # Increase axis label size
+    legend.position = "right",
     legend.title = element_text(size = 30),  # Increase legend title size
     legend.text = element_text(size = 28),   # Increase legend text size
     legend.key.size = unit(2, "lines"),       # Increase legend key size

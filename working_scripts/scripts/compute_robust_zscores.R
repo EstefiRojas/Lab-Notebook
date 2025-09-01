@@ -39,12 +39,12 @@ compute_robust_zscores_optimized <- function(positive_matrix, negative_matrix, v
   zscores <- sweep(positive_matrix, 2, median_values, "-")  # Center each column by subtracting the median
   zscores <- sweep(zscores, 2, mad_values, "/")  # Scale each column by dividing by MAD
   
-  #print("\n\nMedian values:\n")
-  #print(median_values)
-  #print("MAD values:\n")
-  #print(mad_values)
-  #print("meanAD values:\n")
-  #print(meanAD_values)
+  print("\n\nMedian values:\n")
+  print(median_values)
+  print("MAD values:\n")
+  print(mad_values)
+  print("meanAD values:\n")
+  print(meanAD_values)
   
   zscores
 }
@@ -119,20 +119,30 @@ get_robust_zscores <- function(data, output_dir) {
   #print(sd(protein_negative_z_scores$RPKM_tissue, na.rm = TRUE))
   
   #Restore Dataset
-  protein_functional_z_scores$Dataset <- (protein_positive_feature_matrix %>% 
-                                            filter(Dataset == "protein-coding-exon2" | Dataset == "protein-coding-exon3") %>% 
-                                            dplyr::select(Dataset))$Dataset
-  protein_negative_z_scores$Dataset <- (protein_negative_feature_matrix %>% 
-                                          filter(Dataset == "protein-exon2-negative-control" | Dataset == "protein-exon3-negative-control") %>% 
-                                          dplyr::select(Dataset))$Dataset
+  protein_functional_z_scores$Dataset <- protein_positive_feature_matrix$Dataset
+  protein_negative_z_scores$Dataset <- protein_negative_feature_matrix$Dataset
+  
+  protein_exon2_functional_z_scores <- protein_functional_z_scores %>% 
+                                            filter(Dataset == "protein-coding-exon2")
+  protein_exon3_functional_z_scores <- protein_functional_z_scores %>% 
+                                                  filter(Dataset == "protein-coding-exon3")
+
+  protein_exon2_negative_z_scores <- protein_negative_z_scores %>% 
+                                          filter(Dataset == "protein-exon2-negative-control")
+  protein_exon3_negative_z_scores <- protein_negative_z_scores %>% 
+                                                filter(Dataset == "protein-exon3-negative-control")
   #Join in one dataframe
   protein_zscores_all <- rbind(protein_functional_z_scores,protein_negative_z_scores)
   # Save z-scores to CSV
-  z_scores_file <- file.path(output_dir, "mrna_z_scores.csv")
-  write.csv(protein_functional_z_scores, z_scores_file, row.names = FALSE)
+  z_scores_file <- file.path(output_dir, "functional-protein-exon2-dataset-zscores.csv")
+  write.csv(protein_exon2_functional_z_scores, z_scores_file, row.names = FALSE)
+  z_scores_file <- file.path(output_dir, "functional-protein-exon3-dataset-zscores.csv")
+  write.csv(protein_exon3_functional_z_scores, z_scores_file, row.names = FALSE)
   
-  z_scores_file <- file.path(output_dir, "mrna_negative_control_z_scores.csv")
-  write.csv(protein_negative_z_scores, z_scores_file, row.names = FALSE)
+  z_scores_file <- file.path(output_dir, "protein-exon2-negative-control-dataset-zscores.csv")
+  write.csv(protein_exon2_negative_z_scores, z_scores_file, row.names = FALSE)
+  z_scores_file <- file.path(output_dir, "protein-exon3-negative-control-dataset-zscores.csv")
+  write.csv(protein_exon3_negative_z_scores, z_scores_file, row.names = FALSE)
   
   # Save raw data subset
   subset_file <- file.path(output_dir, "mrna_features.csv")
@@ -172,19 +182,28 @@ get_robust_zscores <- function(data, output_dir) {
   #print(summary(lncrna_negative_z_scores %>% select(H3K9ac_MaxScaledSignal,H3K36me3_MaxScaledSignal,H3K79me2_MaxScaledSignal,chrm_acc_MaxScaledSignal)))
   
   #Restore Dataset
-  lncrna_functional_z_scores$Dataset <- (lncrna_positive_feature_matrix %>% 
-                                           filter(Dataset == "lncrna-exon1" | Dataset == "lncrna-exon2") %>% 
-                                           dplyr::select(Dataset))$Dataset
-  lncrna_negative_z_scores$Dataset <- (lncrna_negative_feature_matrix %>% 
-                                         filter(Dataset == "lncrna-exon1-negative-control" | Dataset == "lncrna-exon2-negative-control") %>% 
-                                         dplyr::select(Dataset))$Dataset
+  lncrna_functional_z_scores$Dataset <- lncrna_positive_feature_matrix$Dataset
+  lncrna_negative_z_scores$Dataset <- lncrna_negative_feature_matrix$Dataset
+  
+  lncrna_exon1_functional_z_scores <- lncrna_functional_z_scores %>% 
+                                                 filter(Dataset == "lncrna-exon1")
+  lncrna_exon2_functional_z_scores <- lncrna_functional_z_scores %>% 
+                                                 filter(Dataset == "lncrna-exon2")
+  lncrna_exon1_negative_z_scores <- lncrna_negative_z_scores %>% 
+                                               filter(Dataset == "lncrna-exon1-negative-control")
+  lncrna_exon2_negative_z_scores <- lncrna_negative_z_scores %>% 
+                                               filter(Dataset == "lncrna-exon2-negative-control")
   
   # Save z-scores to CSV
-  z_scores_file <- file.path(output_dir, "lncrna_z_scores.csv")
-  write.csv(lncrna_functional_z_scores, z_scores_file, row.names = FALSE)
+  z_scores_file <- file.path(output_dir, "functional-lncrna-exon1-dataset-zscores.csv")
+  write.csv(lncrna_exon1_functional_z_scores, z_scores_file, row.names = FALSE)
+  z_scores_file <- file.path(output_dir, "functional-lncrna-exon2-dataset-zscores.csv")
+  write.csv(lncrna_exon2_functional_z_scores, z_scores_file, row.names = FALSE)
   
-  z_scores_file <- file.path(output_dir, "lncrna_negative_control_z_scores.csv")
-  write.csv(lncrna_negative_z_scores, z_scores_file, row.names = FALSE)
+  z_scores_file <- file.path(output_dir, "lncrna-exon1-negative-control-dataset-zscores.csv")
+  write.csv(lncrna_exon1_negative_z_scores, z_scores_file, row.names = FALSE)
+  z_scores_file <- file.path(output_dir, "lncrna-exon2-negative-control-dataset-zscores.csv")
+  write.csv(lncrna_exon2_negative_z_scores, z_scores_file, row.names = FALSE)
   
   # Save raw subset feature to CSV
   subset_file <- file.path(output_dir, "lncrna_features.csv")
@@ -199,7 +218,7 @@ get_robust_zscores <- function(data, output_dir) {
     filter(Dataset == "short-ncrna" | Dataset == "short-ncrna") #%>% 
   #dplyr::select(-Dataset)
   sncrna_negative_feature_matrix <- data_numeric %>% 
-    filter(Dataset == "short-ncrna-negative-control" | Dataset == "short-ncrna-negative-control") #%>% 
+    filter(Dataset == "short-ncrna-negative-control") #%>% 
   #dplyr::select(-Dataset)
   
   # Select random samples from positive and negative datasets
@@ -225,17 +244,18 @@ get_robust_zscores <- function(data, output_dir) {
   
   
   #Restore Dataset
-  sncrna_functional_z_scores$Dataset <- (sncrna_positive_feature_matrix %>% 
-                                           filter(Dataset ==  "short-ncrna" | Dataset == "short-ncrna") %>% 
-                                           dplyr::select(Dataset))$Dataset
-  sncrna_negative_z_scores$Dataset <- (sncrna_negative_feature_matrix %>% 
-                                         filter(Dataset == "short-ncrna-negative-control" | Dataset == "short-ncrna-negative-control") %>% 
-                                         dplyr::select(Dataset))$Dataset
+  sncrna_functional_z_scores$Dataset <- sncrna_positive_feature_matrix$Dataset
+  sncrna_negative_z_scores$Dataset <- sncrna_negative_feature_matrix$Dataset
+  
+  sncrna_functional_z_scores <- sncrna_functional_z_scores %>% 
+                                           filter(Dataset ==  "short-ncrna")
+  sncrna_negative_z_scores <- sncrna_negative_z_scores %>% 
+                                         filter(Dataset == "short-ncrna-negative-control")
   # Save z-scores to CSV
-  z_scores_file <- file.path(output_dir, "sncrna_z_scores.csv")
+  z_scores_file <- file.path(output_dir, "functional-short-ncrna-dataset-zscores.csv")
   write.csv(sncrna_functional_z_scores, z_scores_file, row.names = FALSE)
   
-  z_scores_file <- file.path(output_dir, "sncrna_negative_control_z_scores.csv")
+  z_scores_file <- file.path(output_dir, "short-ncrna-negative-control-dataset-zscores.csv")
   write.csv(sncrna_negative_z_scores, z_scores_file, row.names = FALSE)
   
   # Save raw subset to CSV

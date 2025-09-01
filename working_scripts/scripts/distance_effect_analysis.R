@@ -21,7 +21,7 @@ eod_select_features <- c("GC_percentage", "lowComplexity_density",
                          "phyloP_max_241w", "phyloP_max_100w", 
                          "GERP_91_mammals_max", "GERP_63_amniotes_max", 
                          "RPKM_tissue", "RPKM_primary.cell", 
-                         "H3K9ac_MaxScaledSignal", "H3K79me2_MaxScaledSignal", 
+                         "H3K9ac_MaxScaledSignal", "H3K79me2_MaxScaledSignal", "H3K79me1_MaxScaledSignal", 
                          "chrm_acc_MaxScaledSignal", "methylome", 
                          "repeat_distance", "copy_number", "coding_potential", 
                          "fickett", "Max_covariance", "MFE",
@@ -33,7 +33,7 @@ eod_select_features_labels <- c("GC%", "Complexity",
                                 "PhyloP-mammals", "PhyloP-vertebrates",
                                 "GERP-mammals", "GERP-vertebrates",
                                 "Tissue RPKM", "Primary cell RPKM", 
-                                "H3K9ac", "H3K79me2",
+                                "H3K9ac", "H3K79me2", "H3K79me1",
                                 "Chromatin", "Methylome",
                                 "Repeat.free", "Copies", "RNAcode",
                                 "Fickett", "Covariance", "MFE",
@@ -43,17 +43,17 @@ eod_select_features_labels <- c("GC%", "Complexity",
 
 # Select just desired features
 unique(zscores_all$Dataset)
-funcProtExon2DataSelect <- zscores_all %>% filter(Dataset == "protein-coding-exon2") %>% select(all_of(eod_select_features))
-funcProtExon3DataSelect <- zscores_all %>% filter(Dataset == "protein-coding-exon3") %>% select(all_of(eod_select_features))
-funcLncrnaExon1DataSelect <- zscores_all %>% filter(Dataset == "lncrna-exon1") %>% select(all_of(eod_select_features))
-funcLncrnaExon2DataSelect <- zscores_all %>% filter(Dataset == "lncrna-exon2") %>% select(all_of(eod_select_features))
-funcSncrnaDatasetSelect <- zscores_all %>% filter(Dataset == "short-ncrna") %>% select(all_of(eod_select_features))
+funcProtExon2DataSelect <- zscores_all %>% filter(Dataset == "protein-coding-exon2") %>% dplyr::select(all_of(eod_select_features))
+funcProtExon3DataSelect <- zscores_all %>% filter(Dataset == "protein-coding-exon3") %>% dplyr::select(all_of(eod_select_features))
+funcLncrnaExon1DataSelect <- zscores_all %>% filter(Dataset == "lncrna-exon1") %>% dplyr::select(all_of(eod_select_features))
+funcLncrnaExon2DataSelect <- zscores_all %>% filter(Dataset == "lncrna-exon2") %>% dplyr::select(all_of(eod_select_features))
+funcSncrnaDatasetSelect <- zscores_all %>% filter(Dataset == "short-ncrna") %>% dplyr::select(all_of(eod_select_features))
 
-protExon2NCDataSelect <- zscores_all %>% filter(Dataset == "protein-exon2-negative-control") %>% select(all_of(eod_select_features))
-protExon3NCDataSelect <- zscores_all %>% filter(Dataset == "protein-exon3-negative-control") %>% select(all_of(eod_select_features))
-lncrnaExon1NCDataSelect <- zscores_all %>% filter(Dataset == "lncrna-exon1-negative-control") %>% select(all_of(eod_select_features))
-lncrnaExon2NCDataSelect <- zscores_all %>% filter(Dataset == "lncrna-exon2-negative-control") %>% select(all_of(eod_select_features))
-sncrnaNCDataSelect <- zscores_all %>% filter(Dataset == "short-ncrna-negative-control") %>% select(all_of(eod_select_features))
+protExon2NCDataSelect <- zscores_all %>% filter(Dataset == "protein-exon2-negative-control") %>% dplyr::select(all_of(eod_select_features))
+protExon3NCDataSelect <- zscores_all %>% filter(Dataset == "protein-exon3-negative-control") %>% dplyr::select(all_of(eod_select_features))
+lncrnaExon1NCDataSelect <- zscores_all %>% filter(Dataset == "lncrna-exon1-negative-control") %>% dplyr::select(all_of(eod_select_features))
+lncrnaExon2NCDataSelect <- zscores_all %>% filter(Dataset == "lncrna-exon2-negative-control") %>% dplyr::select(all_of(eod_select_features))
+sncrnaNCDataSelect <- zscores_all %>% filter(Dataset == "short-ncrna-negative-control") %>% dplyr::select(all_of(eod_select_features))
 
 
 # Retrieve DistanceGene feature and add to negative control z-score dataframes
@@ -596,6 +596,6 @@ lncrna_corr_matrix <- lncrna_corr_matrix |>
   pivot_wider(names_from = measurement,
               values_from = value)
 
-write.csv(prot_corr_matrix, file = "../results/distance_effect/spearman/corr_matrix_protein.csv")
-write.csv(sncrna_corr_matrix, file = "../results/distance_effect/spearman/corr_matrix_sncrna.csv")
-write.csv(lncrna_corr_matrix, file = "../results/distance_effect/spearman/corr_matrix_lncrna.csv")
+write.csv(prot_corr_matrix, file = "results/distance_effect/spearman/corr_matrix_protein.csv")
+write.csv(sncrna_corr_matrix, file = "results/distance_effect/spearman/corr_matrix_sncrna.csv")
+write.csv(lncrna_corr_matrix, file = "results/distance_effect/spearman/corr_matrix_lncrna.csv")

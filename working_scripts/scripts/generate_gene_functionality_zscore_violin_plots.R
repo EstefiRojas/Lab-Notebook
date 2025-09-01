@@ -21,7 +21,8 @@ VIOLIN_PLOT_SELECTED_FEATURES <- c("Random","GC_percentage",
                                    "fickett","coding_potential","Max_covariance",
                                    "MFE","accessibility","RNAalifold_score","Interaction_ave",
                                    "SNP_density","MAF_avg",
-                                   "H3K9ac_MaxScaledSignal","H3K79me2_MaxScaledSignal","chrm_acc_MaxScaledSignal",
+                                   "H3K9ac_MaxScaledSignal","H3K79me2_MaxScaledSignal","H3K79me1_MaxScaledSignal",
+                                   "chrm_acc_MaxScaledSignal",
                                    "methylome")
 length(VIOLIN_PLOT_SELECTED_FEATURES)
 
@@ -40,7 +41,7 @@ VIOLIN_PLOT_SELECTED_FEATURES_LABELS <- c("Random number","GC%",
                                           "Fickett score","RNAcode coding potential","Covariance max",
                                           "Secondary structure MFE","RNA accessibility","RNAalifold","RNA-RNA interaction",
                                           "SNP density","Minor allele frequency average",
-                                          "H3K9ac","H3K79me2","Chromatin accessibility","Methylome")
+                                          "H3K9ac","H3K79me2","H3K79me1","Chromatin Accessibility","Methylome")
 
 VIOLIN_PLOT_SELECTED_FEATURES_LABELS_SHORT <- c("Random","GC%",
                                                 "AA","AC","AG","AT","CA","CC",
@@ -53,7 +54,8 @@ VIOLIN_PLOT_SELECTED_FEATURES_LABELS_SHORT <- c("Random","GC%",
                                                 "Fickett","RNAcode","Covariance",
                                                 "MFE","Accessibility","RNAalifold","Interactions",
                                                 "SNPs","MAF",
-                                                "H3K9ac","H3K79me2","Chromatin",
+                                                "H3K9ac","H3K79me2","H3K79me1",
+                                                "Chromatin Accessibility",
                                                 "Methylome")
 #length(VIOLIN_PLOT_SELECTED_FEATURES_LABELS_SHORT)
 # OR
@@ -224,12 +226,15 @@ create_violin_plot(df_long_intrinsic1_ordered, c(0,1), "intrinsic2_LowComplexity
 ###############
 # Epigenetic. #
 df_long_epigen_1_paper <- df_long_all[df_long_all$feature=="H3K9ac" 
-                                      | df_long_all$feature=="Chromatin"
+                                      | df_long_all$feature=="Chromatin Accessibility"
                                       | df_long_all$feature=="H3K79me2"
+                                      | df_long_all$feature=="H3K79me1"
                                       | df_long_all$feature=="Methylome", ]
+custom_order <- c("H3K79me2", "H3K79me1", "H3K9ac", "Chromatin Accessibility", "Methylome")
+df_long_epigen_1_paper$feature <- factor(df_long_epigen_1_paper$feature, levels = custom_order)
 create_violin_plot(df_long_epigen_1_paper, c(-5,15), "epigenetic_review")
 create_violin_plot(df_long_epigen_1_paper, c(-10,40), "epigenetic_review2")
-create_violin_plot(df_long_epigen_1_paper, c(NA,NA), "epigenetic_review3")
+create_violin_plot(df_long_epigen_1_paper, c(-3,5), "epigenetic_review3")
 
 #OR
 df_long_epigen_1_paper <- df_long_all[df_long_all$feature=="H3K27ac" 
