@@ -4,6 +4,11 @@ library(tidyr)
 library(stringr)
 library(ggplot2)
 library(ggsignif)
+install.packages("paletteer")
+install.packages("ggsci")
+library(paletteer)
+
+paletteer_d("ggsci::planetexpress_futurama")
 
 # Load csv file
 gwas_data <- read.csv("../results/all_lncrna_gwas_dataset_11_aug_2025.csv", header = TRUE) %>%
@@ -476,15 +481,26 @@ filtered_snp_count_data <- gwas_data %>%
          snp_density_category = case_when(
            is.na(selected_snp_density) ~ "NA",
            selected_snp_density == 0 ~ "NA",
-           selected_snp_density > 0 & selected_snp_density <= 0.076 ~ ">0",
-           selected_snp_density > 0.076 & selected_snp_density <= 0.2122 ~ ">0.08",
-           selected_snp_density > 0.2122 & selected_snp_density <= 0.6169 ~ ">0.2",
-           selected_snp_density >= 0.6169 ~ "≥0.6"
+           selected_snp_density > 0 & selected_snp_density <= 3.313026e-02 ~ ">0",
+           selected_snp_density > 3.313026e-02 & selected_snp_density <= 6.023517e-02 ~ ">0.03",
+           
+           selected_snp_density > 6.023517e-02 & selected_snp_density <= 9.733829e-02 ~ ">0.06",
+           selected_snp_density > 9.733829e-02 & selected_snp_density <= 1.445242e-01 ~ ">0.09",
+           
+           selected_snp_density > 1.445242e-01 & selected_snp_density <= 2.122017e-01 ~ ">0.15",
+           selected_snp_density > 2.122017e-01 & selected_snp_density <= 3.156822e-01 ~ ">0.2",
+           
+           selected_snp_density > 3.156822e-01 & selected_snp_density <= 4.904365e-01 ~ ">0.3",
+           selected_snp_density > 4.904365e-01 & selected_snp_density <= 8.128765e-01 ~ ">0.4",
+           
+           selected_snp_density > 8.128765e-01 & selected_snp_density <= 1.662732 ~ ">0.8",
+           
+           selected_snp_density >= 1.662732 ~ "≥1.7"
          ),
   ) %>%
   select(highest_prob,tl_prob,tr_prob,
          tl_SNP_count_ct,tr_SNP_count_ct,selected_snp_count,snp_count_category,max_snp_count,
-         tl_snp_density_per_kb,tr_snp_density_per_kb,selected_snp_density,snp_density_category,max_snp_density)# %>%
+         tl_snp_density_per_kb,tr_snp_density_per_kb,selected_snp_density,snp_density_category,max_snp_density) #%>%
   #filter(selected_snp_density > 0)
 
 summary(filtered_snp_count_data$selected_snp_density)
@@ -492,10 +508,22 @@ table(filtered_snp_count_data$snp_density_category)
 summary(filtered_snp_count_data$max_snp_count)
 table(filtered_snp_count_data$snp_count_category)
 
+
+# Get the decile probabilities
+decile_probs <- seq(0, 1, by = 0.1)
+
+# 3. Calculate the decile values
+decile_values <- quantile(filtered_snp_count_data$selected_snp_density, probs = decile_probs, na.rm = TRUE)
+
+# Print the results
+print(decile_values)
+
+
 filtered_snp_count_data$snp_count_category <- factor(filtered_snp_count_data$snp_count_category,
                                           levels = c("NA","≥1",">10","≥100"))
 filtered_snp_count_data$snp_density_category <- factor(filtered_snp_count_data$snp_density_category,
-                                                     levels = c("NA",">0",">0.08",">0.2","≥0.6"))
+                                                     levels = c("NA",">0",">0.03",">0.06",">0.09",">0.15",
+                                                                ">0.2",">0.3",">0.4",">0.8","≥1.7"))
 
 ggplot(filtered_snp_count_data, 
        aes(x=selected_snp_count)) +
@@ -694,16 +722,22 @@ ggplot(filtered_snp_count_data,
 # Define the pairwise comparisons to be performed
 #my_comparisons <- combn(essentiality_labels, 2, simplify = FALSE)
 my_comparisons <- list(c("NA",">0"),
-                       c("NA",">0.08"),
+                       c("NA",">0.03"),
+                       c("NA",">0.06"),
+                       c("NA",">0.09"),
+                       c("NA",">0.15"),
                        c("NA",">0.2"),
-                       c("NA","≥0.6")
+                       c("NA",">0.3"),
+                       c("NA",">0.4"),
+                       c("NA",">0.8"),
+                       c("NA","≥1.7")
 )
 
 # Compute KS stats
 
 # --- Step 1: Pre-calculate statistics for labels ---
 reference_group <- "NA"
-comparison_groups <- c(">0",">0.08", ">0.2", "≥0.6")
+comparison_groups <- c(">0",">0.03", ">0.06", ">0.09", ">0.15", ">0.2", ">0.3", ">0.4", ">0.8", "≥1.7")
 
 # Extract the data for the reference group
 reference_data <- filtered_snp_count_data %>%
@@ -738,7 +772,7 @@ stats_labels$y_position <- 1.1
 plot_modified <- ggplot(filtered_snp_count_data, aes(x = snp_density_category, y = highest_prob, fill = snp_density_category)) +
   #geom_violin(scale = "area") +
   geom_boxplot(linewidth = 0.9, na.rm = TRUE, outlier.shape = NA, color = "black", staplewidth = 0.5) +
-  scale_fill_brewer(palette = "Set2") +
+  scale_fill_manual(values = paletteer_d("ggsci::planetexpress_futurama")) +
   scale_x_discrete(labels = new_labels) +
   labs(
     title = "GWAS SNP density (kb)",
@@ -750,15 +784,15 @@ plot_modified <- ggplot(filtered_snp_count_data, aes(x = snp_density_category, y
   theme(
     text = element_text(size = 36),
     plot.title = element_text(size = 46, hjust = 0.5),
-    axis.text.x = element_text(hjust = 0.5, size = 30),
-    axis.text.y = element_text(size = 30),
+    axis.text.x = element_text(hjust = 0.5, size = 22),
+    axis.text.y = element_text(size = 22),
     axis.title = element_text(size = 44),
     panel.grid.major = element_line(color = "gray90"),
     panel.grid.minor = element_blank(),
     axis.title.x = element_blank(),
     legend.position = "none",
     panel.border = element_rect(colour = "black", fill = NA, size = 0.3),
-    plot.caption = element_text(size = 20, hjust = -0.12, face = "bold.italic", color = "grey40")
+    plot.caption = element_text(size = 20, hjust = -0.1, face = "bold.italic", color = "grey40")
   )
 
 # Add the statistical comparison layer
@@ -769,7 +803,7 @@ plot_with_text_stats <- plot_modified +
     data = stats_labels,
     aes(x = snp_density_category, y = y_position, label = label),
     inherit.aes = FALSE, 
-    size = 9.5,
+    size = 6.5,
     color = "black",
     fontface = "bold"
   ) +
@@ -824,18 +858,41 @@ filterd_sumbeta_data <- gwas_data %>%
     ),
     # Then classify based on the selected beta
     sumbeta_category = case_when(
-      selected_sumbeta <= 0.00385 ~ "≤4e-3",
-      selected_sumbeta > 0.00385 & selected_sumbeta < 0.01656 ~ ">4e-3",
-      selected_sumbeta > 0.01656 & selected_sumbeta < 0.06478 ~ ">2e-2",
-      selected_sumbeta >= 0.06478 ~ "≥6e-2"
+      selected_sumbeta <= 9.591332e-04 ~ ">0",
+      selected_sumbeta > 9.591332e-04 & selected_sumbeta < 2.653368e-03 ~ ">10e-4",
+      selected_sumbeta > 2.653368e-03 & selected_sumbeta < 5.314310e-03 ~ ">3e-3",
+      
+      selected_sumbeta > 5.314310e-03 & selected_sumbeta < 9.649326e-03 ~ ">5e-3",
+      selected_sumbeta > 9.649326e-03 & selected_sumbeta < 1.655735e-02 ~ ">9e-3",
+      
+      selected_sumbeta > 1.655735e-02 & selected_sumbeta < 2.730117e-02 ~ ">1e-2",
+      selected_sumbeta > 2.730117e-02 & selected_sumbeta < 4.703287e-02 ~ ">3e-2",
+      
+      selected_sumbeta > 4.703287e-02 & selected_sumbeta < 8.686934e-02 ~ ">5e-2",
+      selected_sumbeta > 8.686934e-02 & selected_sumbeta < 2.155738e-01 ~ ">8e-2",
+      
+      selected_sumbeta >= 2.155738e-01 ~ "≥2e-1"
     )
   ) %>%
   select(highest_prob,tl_prob,tr_prob,tl_sum_beta_ct,tr_sum_beta_ct,
          tl_sumbeta_per_kb,tr_sumbeta_per_kb,selected_sumbeta,sumbeta_category) %>%
   filter(!is.na(selected_sumbeta))
 
+
+# Get the decile probabilities
+decile_probs <- seq(0, 1, by = 0.1)
+
+# 3. Calculate the decile values
+decile_values <- quantile(filterd_sumbeta_data$selected_sumbeta, probs = decile_probs, na.rm = TRUE)
+
+# Print the results
+print(decile_values)
+
+
 filterd_sumbeta_data$sumbeta_category <- factor(filterd_sumbeta_data$sumbeta_category,
-                                          levels = c("≤4e-3",">4e-3",">2e-2","≥6e-2"))
+                                          levels = c(">0",">10e-4",">3e-3",">5e-3",
+                                                     ">9e-3",">1e-2",">3e-2",">5e-2",
+                                                     ">8e-2","≥2e-1"))
 summary(filterd_sumbeta_data$selected_sumbeta)
 table(filterd_sumbeta_data$sumbeta_category)
 
@@ -884,15 +941,23 @@ new_labels <- setNames(
 
 # Define the pairwise comparisons to be performed
 #my_comparisons <- combn(essentiality_labels, 2, simplify = FALSE)
-my_comparisons <- list(c("≤4e-3",">4e-3"),
-                       c("≤4e-3",">2e-2"),
-                       c("≤4e-3","≥6e-2"))
+my_comparisons <- list(c(">0",">10e-4"),
+                       c(">0",">3e-3"),
+                       c(">0",">5e-3"),
+                       c(">0",">9e-3"),
+                       c(">0",">1e-2"),
+                       c(">0",">3e-2"),
+                       c(">0",">5e-2"),
+                       c(">0",">8e-2"),
+                       c(">0","≥2e-1"))
 
 # Compute KS stats
 
 # --- Step 1: Pre-calculate statistics for labels ---
-reference_group <- "≤4e-3"
-comparison_groups <- c(">4e-3",">2e-2", "≥6e-2")
+reference_group <- ">0"
+comparison_groups <- c(">10e-4",">3e-3",">5e-3",
+                       ">9e-3",">1e-2",">3e-2",">5e-2",
+                       ">8e-2","≥2e-1")
 
 # Extract the data for the reference group
 reference_data <- filterd_sumbeta_data %>%
@@ -928,7 +993,7 @@ plot_modified <- ggplot(filterd_sumbeta_data, aes(x = sumbeta_category, y = high
   #geom_violin(scale = "area") +
   geom_boxplot(linewidth = 0.9, na.rm = TRUE, outlier.shape = NA, color = "black", staplewidth = 0.5) +
   # Use scale_fill_manual since we mapped the 'fill' aesthetic
-  scale_fill_brewer(palette = "Set2") +
+  scale_fill_manual(values = paletteer_d("ggsci::planetexpress_futurama")) +
   scale_x_discrete(labels = new_labels) +
   # Update the labels for the new plot layout
   labs(
@@ -942,8 +1007,8 @@ plot_modified <- ggplot(filterd_sumbeta_data, aes(x = sumbeta_category, y = high
   theme(
     text = element_text(size = 36),
     plot.title = element_text(size = 46, hjust = 0.5),
-    axis.text.x = element_text(hjust = 0.5, size = 30),
-    axis.text.y = element_text(size = 30),
+    axis.text.x = element_text(hjust = 0.5, size = 24),
+    axis.text.y = element_text(size = 24),
     axis.title = element_text(size = 44),
     panel.grid.major = element_line(color = "gray90"),
     panel.grid.minor = element_blank(),
@@ -961,7 +1026,7 @@ plot_with_text_stats <- plot_modified +
     data = stats_labels,
     aes(x = sumbeta_category, y = y_position, label = label),
     inherit.aes = FALSE, 
-    size = 9.5,
+    size = 6.5,
     color = "black",
     fontface = "bold"
   ) +
