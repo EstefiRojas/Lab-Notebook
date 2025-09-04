@@ -129,7 +129,7 @@ table(filterd_pip_data$cred_set_category)
 # Get the decile probabilities
 decile_probs <- seq(0, 1, by = 0.1)
 
-# 3. Calculate the decile values
+# Calculate the decile values
 decile_values <- quantile(filterd_pip_data$selected_pip, probs = decile_probs, na.rm = TRUE)
 decile_values <- quantile(filterd_pip_data$selected_cred_set_per_kb, probs = decile_probs, na.rm = TRUE)
 
@@ -520,11 +520,20 @@ filterd_pip_data <- lncrna_prob_data %>%
     ),
     # Then classify based on the selected beta
     pip_category = case_when(
-      selected_pip <= 0.065 ~ "≤0.07",
-      #selected_pip >= 0.032 & selected_pip < 0.065 ~ "0.03-0.07",
-      #selected_pip > 0.031 & selected_pip <= 0.065 ~ ">0.03",
-      selected_pip > 0.065 & selected_pip <= 0.148 ~ ">0.07",
-      selected_pip >= 0.148 ~ "≥0.15"
+      selected_pip <= 0.0154696192 ~ ">0",
+      selected_pip >= 0.0154696192 & selected_pip < 0.0260565147 ~ ">0.015",
+      selected_pip >= 0.0260565147 & selected_pip < 0.0367945728 ~ ">0.025",
+      
+      selected_pip >= 0.0367945728 & selected_pip < 0.0490878298 ~ ">0.035",
+      selected_pip >= 0.0490878298 & selected_pip < 0.0648863538 ~ ">0.05",
+      
+      selected_pip >= 0.0648863538 & selected_pip < 0.0876403974 ~ ">0.065",
+      selected_pip >= 0.0876403974 & selected_pip < 0.1226920873 ~ ">0.085",
+      
+      selected_pip >= 0.1226920873 & selected_pip < 0.1839248208 ~ ">0.12",
+      selected_pip >= 0.1839248208 & selected_pip < 0.3379246446 ~ ">0.18",
+
+      selected_pip >= 0.3379246446 ~ "≥0.35"
     ),
     tl_cred_sets_per_kb = tl_cred_set_count / (End_Transcript_Left - Start_Transcript_Left) * 1000,
     tr_cred_sets_per_kb = tr_cred_set_count / (End_Transcript_Right - Start_Transcript_Right) * 1000,
@@ -550,10 +559,19 @@ filterd_pip_data <- lncrna_prob_data %>%
     # Then classify based on the selected count of cred_sets
     cred_set_category = case_when(
       is.na(selected_cred_set_per_kb) ~ "NA",
-      selected_cred_set_per_kb <= 0.059062 ~ "≤0.06",
-      selected_cred_set_per_kb > 0.059062 & selected_cred_set_per_kb <= 0.122556 ~ ">0.06",
-      selected_cred_set_per_kb > 0.122556 & selected_cred_set_per_kb <= 0.272276 ~ ">0.12",
-      selected_cred_set_per_kb >= 0.272276 ~ "≥0.3"
+      selected_cred_set_per_kb <= 0.032911066 ~ ">0",
+      selected_cred_set_per_kb > 0.032911066 & selected_cred_set_per_kb <= 0.049895444 ~ ">0.03",
+      selected_cred_set_per_kb > 0.049895444 & selected_cred_set_per_kb <= 0.068318855 ~ ">0.05",
+      
+      selected_cred_set_per_kb > 0.068318855 & selected_cred_set_per_kb <= 0.091874616 ~ ">0.07",
+      selected_cred_set_per_kb > 0.091874616 & selected_cred_set_per_kb <= 0.122556412 ~ ">0.1",
+      
+      selected_cred_set_per_kb > 0.122556412 & selected_cred_set_per_kb <= 0.163543033 ~ ">0.12",
+      selected_cred_set_per_kb > 0.163543033 & selected_cred_set_per_kb <= 0.227184954 ~ ">0.16",
+      
+      selected_cred_set_per_kb > 0.227184954 & selected_cred_set_per_kb <= 0.340410081 ~ ">0.23",
+      selected_cred_set_per_kb > 0.340410081 & selected_cred_set_per_kb <= 0.593225536 ~ ">0.35",
+      selected_cred_set_per_kb >= 0.593225536 ~ "≥0.6"
     )
   ) %>%
   select(highest_prob,tl_prob,tr_prob,
@@ -565,10 +583,20 @@ summary(filterd_pip_data$selected_cred_set_per_kb)
 
 table(filterd_pip_data$pip_category)
 table(filterd_pip_data$cred_set_category)
+
+# 3. Calculate the decile values
+decile_values <- quantile(filterd_pip_data$selected_pip, probs = decile_probs, na.rm = TRUE)
+decile_values <- quantile(filterd_pip_data$selected_cred_set_per_kb, probs = decile_probs, na.rm = TRUE)
+
+print(decile_values)
+
+
 filterd_pip_data$pip_category <- factor(filterd_pip_data$pip_category,
-                                        levels = c("≤0.07",">0.07","≥0.15"))
+                                        levels = c(">0",">0.015",">0.025",">0.035",">0.05",
+                                                   ">0.065",">0.085",">0.12",">0.18","≥0.35"))
 filterd_pip_data$cred_set_category <- factor(filterd_pip_data$cred_set_category,
-                                             levels = c("NA","≤0.06",">0.06",">0.12","≥0.3"))
+                                             levels = c("NA",">0",">0.03",">0.05",">0.07",">0.1",">0.12",
+                                                        ">0.16",">0.23",">0.35","≥0.6"))
 
 # --- Prepare Legend Labels with Record Counts ---
 
@@ -616,14 +644,22 @@ ggplot(filterd_pip_data, aes(x = selected_pip)) +
 
 # Define the pairwise comparisons to be performed
 #my_comparisons <- combn(essentiality_labels, 2, simplify = FALSE)
-my_comparisons <- list(c("≤0.07",">0.07"),
-                       c("≤0.07","≥0.15"))
+my_comparisons <- list(c(">0",">0.015"),
+                       c(">0",">0.025"),
+                       c(">0",">0.035"),
+                       c(">0",">0.05"),
+                       c(">0",">0.065"),
+                       c(">0",">0.085"),
+                       c(">0",">0.12"),
+                       c(">0",">0.18"),
+                       c("≤0.07","≥0.35"))
 
 # Compute KS stats
 
 # --- Step 1: Pre-calculate statistics for labels ---
-reference_group <- "≤0.07"
-comparison_groups <- c(">0.07", "≥0.15")
+reference_group <- ">0"
+comparison_groups <- c(">0.015",">0.025",">0.035",">0.05",
+                       ">0.065",">0.085",">0.12",">0.18","≥0.35")
 
 # Extract the data for the reference group
 reference_data <- filterd_pip_data %>%
@@ -657,7 +693,7 @@ plot_modified <- ggplot(filterd_pip_data, aes(x = pip_category, y = highest_prob
   #geom_violin(scale = "area") +
   geom_boxplot(linewidth = 0.9, na.rm = TRUE, outlier.shape = NA, color = "black", staplewidth = 0.5) +
   # Use scale_fill_manual since we mapped the 'fill' aesthetic
-  scale_fill_brewer(palette = "Set2") +
+  scale_fill_manual(values = paletteer_d("ggsci::planetexpress_futurama")) +
   scale_x_discrete(labels = new_labels) +
   # Update the labels for the new plot layout
   labs(
@@ -671,15 +707,15 @@ plot_modified <- ggplot(filterd_pip_data, aes(x = pip_category, y = highest_prob
   theme(
     text = element_text(size = 36),
     plot.title = element_text(size = 46, hjust = 0.5),
-    axis.text.x = element_text(hjust = 0.5, size = 30),
-    axis.text.y = element_text(size = 30),
+    axis.text.x = element_text(hjust = 0.5, size = 22),
+    axis.text.y = element_text(size = 22),
     axis.title = element_text(size = 44),
     panel.grid.major = element_line(color = "gray90"),
     panel.grid.minor = element_blank(),
     axis.title.x = element_blank(),
     legend.position = "none",
     panel.border = element_rect(colour = "black", fill = NA, size = 0.3),
-    plot.caption = element_text(size = 20, hjust = -0.12, face = "bold.italic", color = "grey40")
+    plot.caption = element_text(size = 20, hjust = -0.09, face = "bold.italic", color = "grey40")
   )
 
 # Add the statistical comparison layer
@@ -690,7 +726,7 @@ plot_with_text_stats <- plot_modified +
     data = stats_labels,
     aes(x = pip_category, y = y_position, label = label),
     inherit.aes = FALSE, 
-    size = 9.5,
+    size = 6.5,
     color = "black",
     fontface = "bold"
   ) +
@@ -767,16 +803,23 @@ ggplot(filterd_pip_data, aes(x = selected_cred_set_per_kb)) +
 
 # Define the pairwise comparisons to be performed
 #my_comparisons <- combn(essentiality_labels, 2, simplify = FALSE)
-my_comparisons <- list(c("NA","≤0.06"),
-                       c("NA",">0.06"),
+my_comparisons <- list(c("NA",">0"),
+                       c("NA",">0.03"),
+                       c("NA",">0.05"),
+                       c("NA",">0.07"),
+                       c("NA",">0.1"),
                        c("NA",">0.12"),
-                       c("NA","≥0.3"))
+                       c("NA",">0.16"),
+                       c("NA",">0.23"),
+                       c("NA",">0.35"),
+                       c("NA","≥0.6"))
 
 # Compute KS stats
 
 # --- Step 1: Pre-calculate statistics for labels ---
 reference_group <- "NA"
-comparison_groups <- c("≤0.06",">0.06", ">0.12", "≥0.3")
+comparison_groups <- c(">0",">0.03",">0.05",">0.07",">0.1",">0.12",
+                       ">0.16",">0.23",">0.35","≥0.6")
 
 # Extract the data for the reference group
 reference_data <- filterd_pip_data %>%
@@ -813,11 +856,11 @@ plot_modified <- ggplot(filterd_pip_data, aes(x = cred_set_category, y = highest
   #geom_violin(scale = "area") +
   geom_boxplot(linewidth = 0.9, na.rm = TRUE, outlier.shape = NA, color = "black", staplewidth = 0.5) +
   # Use scale_fill_manual since we mapped the 'fill' aesthetic
-  scale_fill_brewer(palette = "Set2") +
+  scale_fill_manual(values = paletteer_d("ggsci::planetexpress_futurama")) +
   scale_x_discrete(labels = new_labels) +
   # Update the labels for the new plot layout
   labs(
-    title = "GWAS Credible Sets (kb)",
+    title = "GWAS: Causal SNPs Open Targets",
     #x = "Number of Credible sets per kb",
     y = "lncRNA Probability",
     caption = "*p-val<5-e8"
@@ -827,15 +870,15 @@ plot_modified <- ggplot(filterd_pip_data, aes(x = cred_set_category, y = highest
   theme(
     text = element_text(size = 36),
     plot.title = element_text(size = 46, hjust = 0.5),
-    axis.text.x = element_text(hjust = 0.5, size = 30),
-    axis.text.y = element_text(size = 30),
+    axis.text.x = element_text(hjust = 0.5, size = 22),
+    axis.text.y = element_text(size = 22),
     axis.title = element_text(size = 44),
     panel.grid.major = element_line(color = "gray90"),
     panel.grid.minor = element_blank(),
     axis.title.x = element_blank(),
     legend.position = "none",
     panel.border = element_rect(colour = "black", fill = NA, size = 0.3),
-    plot.caption = element_text(size = 20, hjust = -0.12, face = "bold.italic", color = "grey40")
+    plot.caption = element_text(size = 20, hjust = -0.09, face = "bold.italic", color = "grey40")
   )
 
 # Add the statistical comparison layer
@@ -846,7 +889,7 @@ plot_with_text_stats <- plot_modified +
     data = stats_labels,
     aes(x = cred_set_category, y = y_position, label = label),
     inherit.aes = FALSE, 
-    size = 9.5,
+    size = 6.5,
     color = "black",
     fontface = "bold"
   ) +

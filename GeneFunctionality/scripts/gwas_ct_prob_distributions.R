@@ -44,10 +44,20 @@ filterd_beta_data <- gwas_data %>%
                                     ),
          # Then classify based on the selected beta
          abs_beta_ratio_category = case_when(
-           selected_abs_beta <= 0.031 ~ "≤0.03",
-           selected_abs_beta > 0.031 & selected_abs_beta <= 0.152 ~ ">0.03",
-           selected_abs_beta > 0.152 & selected_abs_beta <= 0.67 ~ ">0.15",
-           selected_abs_beta >= 0.67 ~ "≥0.7"
+           selected_abs_beta <= 1.4e-02 ~ ">0",
+           selected_abs_beta > 1.4e-02 & selected_abs_beta <= 2.365894e-02 ~ ">0.014",
+           selected_abs_beta > 2.365894e-02 & selected_abs_beta <= 4.288430e-02 ~ ">0.025",
+           
+           selected_abs_beta > 4.288430e-02 & selected_abs_beta <= 7.459166e-02 ~ ">0.05",
+           selected_abs_beta > 7.459166e-02 & selected_abs_beta <= 1.520000e-01 ~ ">0.075",
+           
+           selected_abs_beta > 1.520000e-01 & selected_abs_beta <= 2.644460e-01 ~ ">0.15",
+           selected_abs_beta > 2.644460e-01 & selected_abs_beta <= 4.839612e-01 ~ ">0.25",
+           
+           selected_abs_beta > 4.839612e-01 & selected_abs_beta <= 9.602150e-01 ~ ">0.5",
+           selected_abs_beta > 9.602150e-01 & selected_abs_beta <= 2.3846 ~ ">0.95",
+           
+           selected_abs_beta >= 2.3846 ~ "≥2.4"
          )
   ) %>%
   select(highest_prob,tl_prob,tr_prob,tl_max_abs_beta_ct,tr_max_abs_beta_ct,selected_abs_beta,abs_beta_ratio_category) %>%
@@ -55,9 +65,17 @@ filterd_beta_data <- gwas_data %>%
 summary(filterd_beta_data$selected_abs_beta)
 summary(gwas_data$tl_max_abs_beta_ct)
 summary(gwas_data)
+
+# Get the decile probabilities
+decile_probs <- seq(0, 1, by = 0.1)
+
+decile_values <- quantile(filterd_beta_data$selected_abs_beta, probs = decile_probs, na.rm = TRUE)
+
+print(decile_values)
+
 table(filterd_beta_data$abs_beta_ratio_category)
 filterd_beta_data$abs_beta_ratio_category <- factor(filterd_beta_data$abs_beta_ratio_category,
-                                              levels = c("≤0.03",">0.03",">0.15","≥0.7"))
+                                              levels = c(">0",">0.014",">0.025",">0.05",">0.075",">0.15",">0.25",">0.5",">0.95","≥2.4"))
 
 # --- Prepare Legend Labels with Record Counts ---
 
@@ -105,9 +123,15 @@ ggplot(filterd_beta_data, aes(x = selected_abs_beta)) +
 
 # Define the pairwise comparisons to be performed
 #my_comparisons <- combn(essentiality_labels, 2, simplify = FALSE)
-my_comparisons <- list(c("≤0.03",">0.03"),
-                       c("≤0.03",">0.15"),
-                       c("≤0.03","≥0.7"))
+my_comparisons <- list(c(">0",">0.014"),
+                       c(">0",">0.025"),
+                       c(">0",">0.05"),
+                       c(">0",">0.075"),
+                       c(">0",">0.15"),
+                       c(">0",">0.25"),
+                       c(">0",">0.5"),
+                       c(">0",">0.95"),
+                       c(">0","≥2.4"))
 
 # Custom function to perform K-S test and format the D-statistic and p-value stars
 ks_test_custom <- function(x, y) {
@@ -131,8 +155,8 @@ ks_test_custom <- function(x, y) {
 # --- Step 1: Pre-calculate statistics for labels ---
 
 # Define your reference group and comparison groups
-reference_group <- "≤0.03"
-comparison_groups <- c(">0.03", ">0.15", "≥0.7")
+reference_group <- ">0"
+comparison_groups <- c(">0.014",">0.025",">0.05",">0.075",">0.15",">0.25",">0.5",">0.95","≥2.4")
 
 # Extract the data for the reference group
 reference_data <- filterd_beta_data %>%
@@ -167,7 +191,7 @@ plot_modified <- ggplot(filterd_beta_data, aes(x = abs_beta_ratio_category, y = 
   #geom_violin(scale = "width") +
   geom_boxplot(linewidth = 0.9, na.rm = TRUE, outlier.shape = NA, color = "black", staplewidth = 0.5) +
   # Use scale_fill_manual since we mapped the 'fill' aesthetic
-  scale_fill_brewer(palette = "Set2") +
+  scale_fill_manual(values = paletteer_d("ggsci::planetexpress_futurama")) +
   scale_x_discrete(labels = new_labels) +
   # Update the labels for the new plot layout
   labs(
@@ -187,7 +211,7 @@ plot_modified <- ggplot(filterd_beta_data, aes(x = abs_beta_ratio_category, y = 
     axis.title.x = element_blank(),
     legend.position = "none",
     panel.border = element_rect(colour = "black", fill = NA, size = 0.3),
-    plot.caption = element_text(size = 20, hjust = -0.12, face = "bold.italic", color = "grey40")
+    plot.caption = element_text(size = 20, hjust = -0.09, face = "bold.italic", color = "grey40")
   )
   
 # Add the statistical comparison layer
@@ -198,7 +222,7 @@ plot_with_text_stats <- plot_modified +
     data = stats_labels,
     aes(x = abs_beta_ratio_category, y = y_position, label = label),
     inherit.aes = FALSE, 
-    size = 9.5,
+    size = 6.5,
     color = "black",
     fontface = "bold"
   ) +
