@@ -55,3 +55,13 @@ Using the R script `essential_prob_distribution_Liang.R`, a violin plot is gener
 the maximum probability for each gene id. Then computes a K-S stat between the four groups: Shared, Partially shared, Cel-type specific, 
 and Non-essential.
 
+## Step 5: Obtain a list of lncRNA sequences to test the model
+
+```bash
+
+# Get a list of gencode ids
+
+./find_lncRNA_guides.sh ../data/Liang/processed/Supplementary_tableS1_gRNAs.fasta
+
+```
+
