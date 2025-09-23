@@ -184,7 +184,7 @@ if [ "$FILTERED_COUNT" -eq 0 ]; then
 fi
 
 echo "Aligning gRNAs to the genome with BLAT (this may take a while)..."
-blat -t=dna -q=dna "$GENOME_FASTA" "$FILTERED_GUIDES_FASTA" -stepSize=5 -repMatch=2253 -minScore=20 -minIdentity=0 "$BLAT_OUTPUT_PSL" -noHead
+blat -t=dna -q=dna "$GENOME_FASTA" "$FILTERED_GUIDES_FASTA" -minScore=15 -minIdentity=90 "$BLAT_OUTPUT_PSL" -noHead
 echo "BLAT alignment complete. Output saved to '$BLAT_OUTPUT_PSL'"
 echo ""
 
@@ -239,7 +239,7 @@ FNR==NR {
 }' "$GRNA_METADATA_MAP" "$TEMP_INTERSECT" | sort | uniq >> "$FINAL_REPORT"
 
 # Clean up intermediate files from the tmp directory
-#rm "$TMP_DIR"/*
+rm "$TMP_DIR"/*
 
 echo ""
 echo "--- Workflow Complete! ---"

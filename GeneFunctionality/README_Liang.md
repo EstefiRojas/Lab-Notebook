@@ -55,13 +55,34 @@ Using the R script `essential_prob_distribution_Liang.R`, a violin plot is gener
 the maximum probability for each gene id. Then computes a K-S stat between the four groups: Shared, Partially shared, Cel-type specific, 
 and Non-essential.
 
+
 ## Step 5: Obtain a list of lncRNA sequences to test the model
 
 ```bash
 
 # Get a list of gencode ids
 
-./find_lncRNA_guides.sh ../data/Liang/processed/Supplementary_tableS1_gRNAs.fasta
+./find_lncRNA_guides.sh ../data/Liang/LiangMuller_May2025_Table1_Filtered-gRNAs.csv ../data/Liang/LiangMuller_May2025-Table3-Gene-RRA-Ranking.csv
+
+# Obtain just unique Target Gene Id and ENSG Id combination hits
+
+./filter_unique_hits.sh ../results/gRNA_lncRNA_matches.tsv
+
+# Get the number of unique essential target gene ids
+
+tail -n +2 ../results/gRNA_lncRNA_matches_unique_sorted.tsv | cut -f3 | sort -u | wc -l
+
+# Add the highest probability assigned by the model by joining by ENSG Id
+
+./add_probability_field.sh ../results/gRNA_lncRNA_matches_unique_sorted.tsv ../data/model_predictions/gencode-lncrna-ranking.csv
+
+# Get the number of unique essential target gene ids that matched at least one ENSG Id
+
+tail -n +2 results/gRNA_lncRNA_matches_with_prob.tsv | awk -F'\t' '$9 != "NA"' | cut -f1 | sort -u | wc -l
+
+# Get basic stats from the lncRNA annotations file
+
+./analyze_gtf_stats.sh ../data/references/gencode.v49.long_noncoding_RNAs.gtf
 
 ```
 
