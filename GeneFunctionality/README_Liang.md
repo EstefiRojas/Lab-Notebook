@@ -76,6 +76,14 @@ tail -n +2 ../results/gRNA_lncRNA_matches_unique_sorted.tsv | cut -f3 | sort -u 
 
 ./add_probability_field.sh ../results/gRNA_lncRNA_matches_unique_sorted.tsv ../data/model_predictions/gencode-lncrna-ranking.csv
 
+# Filter just ENSG IDs without model probability assigned
+
+./filter_na_prob.sh ../results/gRNA_lncRNA_matches_with_prob.tsv
+
+# Obtain exon1 and exon2 sequences from ENSG IDs wothout probability assigned
+
+./get_exon_sequences.sh ../results/gRNA_lncRNA_matches_unique_ensg_na_prob.tsv
+
 # Get the number of unique essential target gene ids that matched at least one ENSG Id
 
 tail -n +2 results/gRNA_lncRNA_matches_with_prob.tsv | awk -F'\t' '$9 != "NA"' | cut -f1 | sort -u | wc -l

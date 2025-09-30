@@ -8,7 +8,7 @@
 # 3. Annotates the result from step 2 by looking up the parsed gene ID in a third file
 #    and appending the specific essentiality status found.
 #
-# Usage: ./modified_join_script.sh <original.psl> <data.csv> <essentials.csv> > final_output.csv
+# Usage: ./join_blat_matches_Liang.sh <original.psl> <data.csv> <essentials.csv> > final_output.csv
 
 # --- Input Files ---
 ORIGINAL_PSL_FILE="$1"  # The first input file (PSL format)

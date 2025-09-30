@@ -10,7 +10,7 @@
 #    - If found, it's marked "Essential" and the coPARSE value is appended.
 #    - Otherwise, it's marked "Non-essential" and "NA" is appended.
 #
-# Usage: ./modified_join_script.sh <original.psl> <data.csv> <essentials.csv> > final_output.csv
+# Usage: ./join_blat_matches_Huang.sh <original.psl> <data.csv> <essentials.csv> > final_output.csv
 
 # --- Input Files ---
 ORIGINAL_PSL_FILE="$1"  # The first input file (PSL format)

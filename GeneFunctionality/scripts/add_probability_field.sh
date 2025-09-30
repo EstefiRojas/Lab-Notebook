@@ -6,7 +6,7 @@
 #              file containing functional probability data. It matches records
 #              by the lncRNA Ensembl Gene ID, appends the "highest_prob"
 #              value, and reorders columns to prioritize the Target_Gene_ID.
-# Author: Gemini
+#
 # Date: September 23, 2025
 #
 # Prerequisites:
@@ -16,7 +16,7 @@
 #   1. Run this script from the project's root directory.
 #   2. Make the script executable: chmod +x scripts/add_probability.sh
 #   3. Run the script with the two required files as arguments:
-#      ./scripts/add_probability.sh results/gRNA_lncRNA_matches.tsv path/to/probability_file.csv
+#      ./scripts/add_probability_field.sh results/gRNA_lncRNA_matches.tsv path/to/probability_file.csv
 #
 # ==============================================================================
 

@@ -4,19 +4,19 @@
 # Script: filter_unique_hits.sh
 # Description: This script processes the output from the main find_lncRNA_guides.sh
 #              script to create a filtered and sorted report. For each unique
-#              combination of a Target_Gene_ID and a lncRNA_ENSG_ID, it keeps
-#              only a single entry, prioritizing "gene" hits. The final output
-#              is then sorted by the Target_Gene_ID.
+#              combination of a Target_Gene_ID, lncRNA_ENSG_ID, and gRNA_ID, it
+#              keeps a single entry, prioritizing "gene" hits over "transcript"
+#              hits. The final output is then sorted by the Target_Gene_ID.
 # Date: September 23, 2025
 #
 # Prerequisites:
-#   - awk, head, tail, sort
+#    - awk, head, tail, sort
 #
 # Usage:
-#   1. Run this script from the project's root directory.
-#   2. Make the script executable: chmod +x scripts/filter_unique_hits.sh
-#   3. Run the script with the input file as an argument:
-#      ./scripts/filter_unique_hits.sh results/gRNA_lncRNA_matches.tsv
+#    1. Run this script from the project's root directory.
+#    2. Make the script executable: chmod +x scripts/filter_unique_hits.sh
+#    3. Run the script with the input file as an argument:
+#       ./scripts/filter_unique_hits.sh results/gRNA_lncRNA_matches.tsv
 #
 # ==============================================================================
 
@@ -48,8 +48,9 @@ OUTPUT_FILE="$RESULTS_DIR/gRNA_lncRNA_matches_unique_sorted.tsv"
 
 echo "--- Filtering Report: $INPUT_FILE ---"
 
+# --- MODIFIED STEP ---
 # Use awk to process the report and save the unique hits to a temporary file.
-# For each unique key (Target_Gene_ID + lncRNA_ENSG_ID), we store the "best" line found so far.
+# For each unique key (gRNA_ID + Target_Gene_ID + lncRNA_ENSG_ID), we store the "best" line found.
 # A "gene" line will always replace a "transcript" line for the same key.
 awk '
 BEGIN {
@@ -63,8 +64,8 @@ FNR == 1 {
 }
 # Process all other lines
 {
-    # The key is the combination of Target_Gene_ID (col 3) and lncRNA_ENSG_ID (col 9)
-    key = $3 FS $9;
+    # The key is the combination of gRNA_ID (col 1), Target_Gene_ID (col 3), and lncRNA_ENSG_ID (col 9).
+    key = $1 FS $3 FS $9;
     current_type = $8;
     
     # If we have not seen this key before, store the current line and its type.
@@ -75,7 +76,7 @@ FNR == 1 {
         # If we have seen this key, we check if the new line is better.
         stored_type = line_type[key];
         # A "gene" line is always better than a "transcript" line.
-        if (stored_type == "transcript" && current_type == "gene") {
+        if (stored_type != "gene" && current_type == "gene") {
             best_line[key] = $0;
             line_type[key] = current_type;
         }

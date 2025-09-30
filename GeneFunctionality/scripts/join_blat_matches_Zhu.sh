@@ -8,7 +8,7 @@
 # 3. Annotates the result from step 2 by parsing IDs from a third file and the data stream
 #    to find a common identifier and determine if a row is "ESSENTIAL".
 #
-# Usage: ./modified_join_script.sh <original.psl> <data.csv> <essentials.csv> > final_output.csv
+# Usage: ./join_blat_matches_Zhu.sh <original.psl> <data.csv> <essentials.csv> > final_output.csv
 
 # --- Input Files ---
 ORIGINAL_PSL_FILE="$1"  # The first input file (PSL format)

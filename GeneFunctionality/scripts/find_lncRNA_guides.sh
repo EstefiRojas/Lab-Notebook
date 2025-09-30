@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # ==============================================================================
 # Script: find_lncRNA_guides.sh
 # Description: This script aligns gRNAs against the full human genome (GRCh38)
@@ -128,7 +127,7 @@ echo ""
 echo "--- Step 2: Creating a BED file of lncRNA features ---"
 
 # Parse only gene or transcript features from the GTF.
-awk 'BEGIN{OFS="\t"} $3 == "gene" || $3 == "transcript" {
+awk 'BEGIN{OFS="\t"} $3 == "gene" {
     attributes = $0;
     sub(/.*gene_id "/, "", attributes);
     sub(/".*/, "", attributes);

@@ -7,7 +7,6 @@
 # A script to filter a FASTA file, keeping only records that have a specific
 # keyword (e.g., "lncrna") in their header line.
 #
-# Author: Estefania Rojas
 # -----------------------------------------------------------------------------
 
 # --- 1. Check for Correct Usage ---
