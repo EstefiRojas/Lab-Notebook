@@ -1490,6 +1490,113 @@ pca_joined_plot
 ggsave(PCA_20_FEATURES_LOADINGS_JOINED_PLOT_FILE, pca_loadings_joined_plot, scale = 3, width = 3840, height = 1620, units = "px", bg = "white", dpi = 600)
 
 
+##################
+# 3 October 2025 #
+# Analyze PC6 contributors by feature
+library(ggplot2)
+library(gridExtra)
 
+# Filter the data for only the two datasets of interest
+allrna_data_filtered <- allrna_data_normalized |>
+  filter(Dataset %in% c("short-ncrna","short-ncrna-negative-control"))
 
+# Extract the loadings for PC6
+pc6_loadings <- allrna_pca_result$rotation[, 1:6]
+
+pc6_ordered_abs <- sort(abs(pc6_loadings), decreasing = TRUE)
+
+# Identify your main contributors
+main_features <- c("Primary cell RPKM", "Tissue RPKM", "RNAcode", "Methylome","PhyloP-vertebrates")
+
+# Get the normalized and scaled data
+scaled_data <- scale(allrna_data_filtered |> dplyr::select(-Dataset))
+
+# Create a list to store plots
+plot_list <- list()
+#fixed_bw = density(allrna_pc_scores$PC6)$bw
+
+# Calculate cumulative projections
+for(i in 1:length(main_features)) {
+  # Get features up to index i
+  features_subset <- main_features[1:i]
+  
+  # Calculate the projection using only these features
+  # All other loadings set to 0
+  loadings_subset <- pc6_loadings
+  loadings_subset[!names(loadings_subset) %in% features_subset] <- 0
+  
+  # Project the data
+  projection <- scaled_data %*% loadings_subset
+  
+  # Create data frame for plotting
+  plot_data <- data.frame(
+    PC6_projection = as.vector(projection),
+    Dataset = factor(allrna_data_filtered$Dataset,
+                     levels = c("short-ncrna-negative-control", "short-ncrna"),
+                     labels = c("sncRNA(-)",
+                                "sncRNA(+)"))
+  )
+  
+  # Create plot with colors by Dataset and log scale
+  p <- ggplot(plot_data, aes(x = PC6_projection, color = Dataset)) +
+    # Plot negative control first with thicker line
+    geom_density(data = plot_data[plot_data$Dataset == "sncRNA(-)", ],
+                 linewidth = 1.5, fill = NA) +
+    # Plot positive cases second with thinner line (will be on top)
+    geom_density(data = plot_data[plot_data$Dataset == "sncRNA(+)", ],
+                 linewidth = 1, fill = NA) +
+    scale_color_manual(values = c("sncRNA(-)" = "#0491e8", "sncRNA(+)" = "#D6604DFF")) +
+    labs(
+      title = paste("PC6 with", i, "feature(s)"),
+      subtitle = paste(features_subset, collapse = " + "),
+      x = "PC6 Projection",
+      y = "Density"
+    ) +
+    theme_minimal() +
+    theme(
+      legend.position = "bottom",
+      legend.title = element_blank()
+    )
+  
+  plot_list[[i]] <- p
+}
+
+# Display all plots in a grid
+grid.arrange(grobs = plot_list, ncol = 2)
+
+# Alternative: If you prefer faceted plots instead
+for(i in 1:length(main_features)) {
+  features_subset <- main_features[1:i]
+  loadings_subset <- pc6_loadings
+  loadings_subset[!names(loadings_subset) %in% features_subset] <- 0
+  projection <- scaled_data %*% loadings_subset
+  
+  plot_data <- data.frame(
+    PC6_projection = as.vector(projection),
+    Dataset = allrna_data_filtered$Dataset
+  )
+  
+  # Faceted version
+  p_facet <- ggplot(plot_data, aes(x = PC6_projection, fill = Dataset)) +
+    #geom_histogram(bins = 30, alpha = 0.7) +
+    geom_density(aes(y = after_stat(count)), color = "black", linewidth = 0.5) +
+    facet_wrap(~Dataset, ncol = 1, scales = "free_y") +
+    labs(
+      title = paste("PC6 with", i, "feature(s)"),
+      subtitle = paste(features_subset, collapse = " + "),
+      x = "PC6 Projection",
+      y = "Count"
+    ) +
+    theme_minimal() +
+    theme(legend.position = "none")
+  
+  print(p_facet)
+}
+
+# You can also create a summary showing the loading values
+loading_summary <- data.frame(
+  Feature = main_features,
+  PC6_Loading = pc6_loadings[main_features]
+)
+print(loading_summary)
 
