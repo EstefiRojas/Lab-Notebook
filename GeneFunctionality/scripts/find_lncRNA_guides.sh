@@ -153,7 +153,7 @@ touch "$GRNA_METADATA_MAP"
 awk 'BEGIN {FS=","; OFS="\t"}
 FNR==NR {
     sub(/\r$/, "", $2);
-    if (FNR > 1 && ($2 == "Cell-type specific" || $2 == "Partially shared" || $2 == "Shared")) {
+    if (FNR > 1) {
         essential_genes[$1] = $2
     }
     next

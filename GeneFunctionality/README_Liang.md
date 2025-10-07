@@ -49,14 +49,19 @@ blat -t=dna -q=dna ../data/model_predictions/lncrna_exon2.fasta ../data/Liang/pr
 
 ```
 
+
 ## Step 4: Visualize the distribution differences
 
 Using the R script `essential_prob_distribution_Liang.R`, a violin plot is generated. This script joins exon1 and exon2 data and keeps 
-the maximum probability for each gene id. Then computes a K-S stat between the four groups: Shared, Partially shared, Cel-type specific, 
+the maximum probability for each gene id. Then computes a K-S stat between the four groups: Shared, Partially shared, Cell-type specific, 
 and Non-essential.
 
 
 ## Step 5: Obtain a list of lncRNA sequences to test the model
+
+In this step, we obtain a list of essential and non-essential lncRNA sequences. The corresponding exon1 and exon2 sequences are extracted. 
+This list of sequences is later used in conjuction with the functionality prediction model to obtain a prediction of functionality. With these 
+predictions, an effective measure of the model accuracy can be tested.
 
 ```bash
 
@@ -76,11 +81,18 @@ tail -n +2 ../results/gRNA_lncRNA_matches_unique_sorted.tsv | cut -f3 | sort -u 
 
 ./add_probability_field.sh ../results/gRNA_lncRNA_matches_unique_sorted.tsv ../data/model_predictions/gencode-lncrna-ranking.csv
 
+# Select the best hit (max probability) while keeping all gRNA IDs that match the same Target Gene ID and Ensembl Gene ID
+
+./select_best_hit.sh ../results/gRNA_lncRNA_matches_with_prob.tsv
+
+# TODO: Plot the resulting data using an R script.
+# Lets use a similar script to essential_prob_distribution_Liang.R
+
 # Filter just ENSG IDs without model probability assigned
 
 ./filter_na_prob.sh ../results/gRNA_lncRNA_matches_with_prob.tsv
 
-# Obtain exon1 and exon2 sequences from ENSG IDs wothout probability assigned
+# Obtain exon1 and exon2 sequences from ENSG IDs without probability assigned
 
 ./get_exon_sequences.sh ../results/gRNA_lncRNA_matches_unique_ensg_na_prob.tsv
 
