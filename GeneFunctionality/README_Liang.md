@@ -35,7 +35,7 @@ blat -t=dna -q=dna ../data/model_predictions/lncrna_exon2.fasta ../data/Liang/pr
 ```
 
 
-## Step 3: Finaly, join blat matches with model predictions
+## Step 3: Join blat matches with model predictions
 
 ```bash
 
@@ -65,7 +65,7 @@ predictions, an effective measure of the model accuracy can be tested.
 
 ```bash
 
-# Get a list of gencode ids
+# Get a list of Ensembl ids
 
 ./find_lncRNA_guides.sh ../data/Liang/LiangMuller_May2025_Table1_Filtered-gRNAs.csv ../data/Liang/LiangMuller_May2025-Table3-Gene-RRA-Ranking.csv
 
