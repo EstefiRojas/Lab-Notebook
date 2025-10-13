@@ -48,10 +48,8 @@ OUTPUT_FILE="$RESULTS_DIR/gRNA_lncRNA_matches_unique_sorted.tsv"
 
 echo "--- Filtering Report: $INPUT_FILE ---"
 
-# --- MODIFIED STEP ---
 # Use awk to process the report and save the unique hits to a temporary file.
 # For each unique key (gRNA_ID + Target_Gene_ID + lncRNA_ENSG_ID), we store the "best" line found.
-# A "gene" line will always replace a "transcript" line for the same key.
 awk '
 BEGIN {
     FS="\t";

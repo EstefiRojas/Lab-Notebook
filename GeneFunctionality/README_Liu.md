@@ -28,6 +28,7 @@ awk -F',' 'NR > 1 && tolower($1) != "negative_control" {ids[$1]} END {print leng
 awk -F'\t' 'NR > 1 && tolower($1) != "negative_control" {ids[$2]} END {print length(ids)}' ../results/gRNA_lncRNA_matches_Liu.tsv
 #16401
 
+# Get unique gene ids and ensembl id
 
 
 ```

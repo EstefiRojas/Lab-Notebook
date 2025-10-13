@@ -40,7 +40,7 @@ echo "Directories are ready."
 echo ""
 
 # --- URLs for Genome and lncRNA Annotation ---
-GENOME_FASTA_URL="http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_46/GRCh38.primary_assembly.genome.fa.gz"
+GENOME_FASTA_URL="http://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/GRCh38.primary_assembly.genome.fa.gz"
 LNCRNA_GTF_URL="https://ftp.ebi.ac.uk/pub/databases/gencode/Gencode_human/release_49/gencode.v49.long_noncoding_RNAs.gtf.gz"
 
 # --- Filenames (with directory paths) ---
