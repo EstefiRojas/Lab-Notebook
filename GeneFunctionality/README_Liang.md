@@ -1,6 +1,8 @@
 # Liang et al. 2024 Analysis README
 
 This document outlines the steps to process and analyze the gRNA data from the Liang et al. study.
+The objective is to use the essentiality classification to see if there is a good correlation with
+the model's predictions.
 
 ## Step 1: Convert Supplementary Table S1 gRNAs to FASTA Format
 
@@ -10,7 +12,7 @@ First, we convert the relevant columns from the source CSV file into a separate 
 
 # Convert gRNA1 data
 
-./csv_to_fasta.sh ../data/Liang/LiangMuller_May2025_Table1_Filtered-gRNAs.csv 1-2 4 lncrna > ../data/Liang/processed/Supplementary_tableS1_gRNAs.fasta
+./csv_to_fasta.sh ../data/Liang/LiangMuller_May2025_Table1_Filtered-gRNAs.csv 1-2 4 3 > ../data/Liang/processed/Supplementary_tableS1_gRNAs.fasta
 
 
 ```
@@ -28,6 +30,7 @@ Run `blat` to align the filtered gRNA sequences against the sequences given a pr
 
 blat -t=dna -q=dna ../data/model_predictions/lncrna_exon1.fasta ../data/Liang/processed/Supplementary_tableS1_gRNAs.fasta -minScore=15 -minIdentity=100 ../data/Liang/processed/tableS1_gRNAs_vs_exon1.psl
 
+
 # Align gRNA1 against exon 2 model prediction sequences
 
 blat -t=dna -q=dna ../data/model_predictions/lncrna_exon2.fasta ../data/Liang/processed/Supplementary_tableS1_gRNAs.fasta -minScore=15 -minIdentity=100 ../data/Liang/processed/tableS1_gRNAs_vs_exon2.psl
@@ -42,6 +45,7 @@ blat -t=dna -q=dna ../data/model_predictions/lncrna_exon2.fasta ../data/Liang/pr
 # Join gRNAs with exon 1 model prediction
 
 ./join_blat_matches_Liang.sh ../data/Liang/processed/tableS1_gRNAs_vs_exon1.psl ../data/model_predictions/gencode-lncrna-ranking.csv ../data/Liang/LiangMuller_May2025-Table3-Gene-RRA-Ranking.csv > ../data/Liang/processed/annotated_tableS3_gRNAs_vs_exon1_prob.csv
+
 
 # Join gRNAs with exon 2 model prediction
 
@@ -65,44 +69,64 @@ predictions, an effective measure of the model accuracy can be tested.
 
 ```bash
 
-# Get a list of Ensembl ids
-
+# Get a list of Ensembl ids. This script aligns gRNAs against the 
+# full human genome (GRCh38) and then intersects the results with 
+# a dedicated GENCODE lncRNA annotation file. The final report includes 
+# ALL BLAT hits; if a hit does not overlap a lncRNA, "NA" is reported in 
+# lncRNA fields.
 ./find_lncRNA_guides.sh ../data/Liang/LiangMuller_May2025_Table1_Filtered-gRNAs.csv ../data/Liang/LiangMuller_May2025-Table3-Gene-RRA-Ranking.csv
 
-# Obtain just unique Target Gene Id and ENSG Id combination hits
 
+# Obtain just unique Target Gene Id and ENSG Id combination hits.
+# This script processes the output from the main find_lncRNA_guides.sh
+# script to create a filtered and sorted report. For each unique
+# combination of a Target_Gene_ID, lncRNA_ENSG_ID, and gRNA_ID, it
+# keeps a single entry. The final output is then sorted by the Target_Gene_ID.
 ./filter_unique_hits.sh ../results/gRNA_lncRNA_matches.tsv
 
-# Get the number of unique essential target gene ids
 
+# Get the number of unique essential target gene ids.
 tail -n +2 ../results/gRNA_lncRNA_matches_unique_sorted.tsv | cut -f3 | sort -u | wc -l
 
-# Add the highest probability assigned by the model by joining by ENSG Id
 
+# Add the highest probability assigned by the model by joining by ENSG Id.
+# This script joins the main gRNA analysis report with a second
+# file containing functional probability data. It matches records
+# by the lncRNA Ensembl Gene ID, appends the "highest_prob"
+# value, and reorders columns to prioritize the Target_Gene_ID.
 ./add_probability_field.sh ../results/gRNA_lncRNA_matches_unique_sorted.tsv ../data/model_predictions/gencode-lncrna-ranking.csv
 
-# Select the best hit (max probability) while keeping all gRNA IDs that match the same Target Gene ID and Ensembl Gene ID
 
+# Select the best hit (max probability) while keeping all gRNA IDs that 
+# match the same Target Gene ID and Ensembl Gene ID.
+# This script filters an enriched gRNA report to find the best
+# lncRNA hit for each unique Target_Gene_ID. If a gene has
+# multiple lncRNA matches, it determines the best one by finding
+# the highest probability. It then keeps ALL gRNA records that
+# target that single best lncRNA. If a gene only has non-matches
+# (NA), it keeps one of those records. The final output is sorted.
 ./select_best_hit.sh ../results/gRNA_lncRNA_matches_with_prob.tsv
+
 
 # TODO: Plot the resulting data using an R script.
 # Lets use a similar script to essential_prob_distribution_Liang.R
 
-# Filter just ENSG IDs without model probability assigned
 
+# Filter just ENSG IDs without model probability assigned
 ./filter_na_prob.sh ../results/gRNA_lncRNA_matches_with_prob.tsv
 
-# Obtain exon1 and exon2 sequences from ENSG IDs without probability assigned
 
+# Obtain exon1 and exon2 sequences from ENSG IDs without probability assigned
 ./get_exon_sequences.sh ../results/gRNA_lncRNA_matches_unique_ensg_na_prob.tsv
 
-# Get the number of unique essential target gene ids that matched at least one ENSG Id
 
+# Get the number of unique essential target gene ids that matched at least one ENSG Id
 tail -n +2 results/gRNA_lncRNA_matches_with_prob.tsv | awk -F'\t' '$9 != "NA"' | cut -f1 | sort -u | wc -l
 
-# Get basic stats from the lncRNA annotations file
 
+# Get basic stats from the lncRNA annotations file
 ./analyze_gtf_stats.sh ../data/references/gencode.v49.long_noncoding_RNAs.gtf
+
 
 ```
 

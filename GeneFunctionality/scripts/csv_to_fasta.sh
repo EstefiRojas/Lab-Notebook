@@ -15,13 +15,14 @@ NAME_SEPARATOR="_"
 # Check for correct number of arguments
 if [ "$#" -ne 4 ]; then
     # Print usage instructions to standard error (stderr)
-    echo "Usage: $0 <input.csv> <name_column_spec> <sequence_column_number> <suffix>" >&2
+    echo "Usage: $0 <input.csv> <name_column_spec> <sequence_column_number> <suffix_column_number>" >&2
     echo "  <name_column_spec> can be:" >&2
     echo "    - A single column number (e.g., 7)" >&2
     echo "    - A range of columns (e.g., 1-3)" >&2
     echo "    - A comma-separated list of columns (e.g., 1,3,2)" >&2
-    echo "  Example (range): $0 data/regions.csv 1-2 6 exon1 > output.fasta" >&2
-    echo "  Example (list):  $0 data/regions.csv 1,3 6 exon1 > output.fasta" >&2
+    echo "  <suffix_column_number> is the column number to use as suffix" >&2
+    echo "  Example (range): $0 data/regions.csv 1-2 6 3 > output.fasta" >&2
+    echo "  Example (list):  $0 data/regions.csv 1,3 6 3 > output.fasta" >&2
     exit 1
 fi
 
@@ -29,7 +30,13 @@ fi
 INPUT_FILE=$1
 NAME_COLUMN_SPEC=$2 # e.g., "7" or "1-2" or "1,3"
 SEQUENCE_COLUMN=$3
-SUFFIX=$4
+SUFFIX_COLUMN=$4  # Now this is a column number instead of a fixed string
+
+# Validate that SUFFIX_COLUMN is a number
+if ! [[ "$SUFFIX_COLUMN" =~ ^[0-9]+$ ]]; then
+    echo "Error: Suffix column must be a number: $SUFFIX_COLUMN" >&2
+    exit 1
+fi
 
 # --- Process Name Column Specification ---
 
@@ -68,7 +75,7 @@ fi
 # echo "Name Column Spec: ${NAME_COLUMN_SPEC}" >&2
 # echo "Resolved Name Columns: ${NAME_COLS_LIST}" >&2
 # echo "Sequence Column: ${SEQUENCE_COLUMN}" >&2
-# echo "Suffix: ${SUFFIX}" >&2
+# echo "Suffix Column: ${SUFFIX_COLUMN}" >&2
 # echo "Name Separator: ${NAME_SEPARATOR}" >&2
 # echo "--------------------------------------------------" >&2
 
@@ -80,12 +87,12 @@ fi
 # -v passes shell variables into awk variables
 #   NAME_COLS_STR: Space-separated list of columns for the name
 #   SEQ_COL: Column number for the sequence
-#   SUFFIX_VAR: Suffix to append to the name
+#   SUFFIX_COL: Column number for the suffix
 #   SEP: Separator to use between name parts
 awk -F',' \
     -v NAME_COLS_STR="$NAME_COLS_LIST" \
     -v SEQ_COL="$SEQUENCE_COLUMN" \
-    -v SUFFIX_VAR="$SUFFIX" \
+    -v SUFFIX_COL="$SUFFIX_COLUMN" \
     -v SEP="$NAME_SEPARATOR" \
 '
 NR > 1 {
@@ -110,10 +117,21 @@ NR > 1 {
         }
     }
 
+    # Get the suffix from the specified column
+    suffix_value = "";
+    if (SUFFIX_COL > 0 && SUFFIX_COL <= NF) {
+        suffix_value = $SUFFIX_COL;
+    } else {
+        print "Warning: Invalid suffix column number " SUFFIX_COL " for record " NR > "/dev/stderr";
+    }
+
     # Print the FASTA formatted output for this record
     # Check if constructed_name is not empty before printing
-    if (constructed_name != "") {
-        print ">" constructed_name "_" SUFFIX_VAR "\n" $SEQ_COL;
+    if (constructed_name != "" && suffix_value != "") {
+        print ">" constructed_name "_" suffix_value "\n" $SEQ_COL;
+    } else if (constructed_name != "" && suffix_value == "") {
+        # Print without suffix if suffix is empty
+        print ">" constructed_name "\n" $SEQ_COL;
     } else {
         print "Warning: Could not construct name for record " NR > "/dev/stderr";
     }
@@ -123,4 +141,3 @@ NR > 1 {
 
 # Optional completion message to stderr
 # echo "Processing complete. Output sent to standard output." >&2
-
