@@ -54,8 +54,8 @@ FNR==NR {
     if (FNR == 1) next; # Skip header on first pass
     
     target_gene = $1;  # Only use Target_Gene_ID as the key
-    ensg_id = $9;
-    prob = $13;
+    ensg_id = $5;
+    prob = $7;
     
     # Only consider non-NA entries
     if (ensg_id != "NA" && prob != "NA") {
@@ -79,7 +79,7 @@ FNR==NR {
     }
     
     target_gene = $1;
-    current_ensg = $9;
+    current_ensg = $5;
     
     # Case A: This Target Gene had successful matches.
     # Print all lines where the ENSG ID matches the best one we found.

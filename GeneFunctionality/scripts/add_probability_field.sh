@@ -91,7 +91,7 @@ FILENAME == ARGV[2] {
     temp = $1; $1 = $3; $3 = temp;
     
     # The lncRNA ENSG ID is in the 9th column of the original file
-    lncRNA_ensg_id = $9;
+    lncRNA_ensg_id = $5;
     
     # If there is no lncRNA hit, just print the modified line with NA for the new column
     if (lncRNA_ensg_id == "NA") {

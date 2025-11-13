@@ -1,7 +1,12 @@
 #!/opt/local/bin/bash
 
-# Optimized script using associative arrays for better performance
-# Usage: ./add_match_column_optimized.sh input.csv input.psl output.csv
+# CORRECTED SCRIPT (v3)
+# This version matches the gRNA_ID from the CSV (col 3) with the
+# gRNA_ID extracted from the PSL (col 10).
+# It correctly reads the strand from CSV col 6.
+# It also now REPLACES columns 8 and 9 instead of appending.
+#
+# Usage: ./correct_match_script.sh input.csv input.psl output.csv
 
 # Check bash version (associative arrays require bash 4+)
 if [ "${BASH_VERSION%%.*}" -lt 4 ]; then
@@ -32,32 +37,14 @@ if [ ! -f "$INPUT_PSL" ]; then
     exit 1
 fi
 
-# Declare associative array to store Target_Gene_IDs from PSL
-declare -A psl_targets
+# Declare two associative arrays
+# psl_strands stores the extracted strand (+ or -)
+# psl_col14 stores the full value of the 14th column
+# *** KEY IS gRNA_ID ***
+declare -A psl_strands
+declare -A psl_col14
 
-echo "Processing PSL file to extract Target_Gene_IDs..."
-
-# Function to extract Target_Gene_ID from query name
-extract_target_id() {
-    local query="$1"
-    local target_id=""
-    
-    # Handle different possible formats
-    # Format 1: gRNA_ID_Target_Gene_ID_lncRNA (e.g., gL_000047_Hum_XLOC_000060_lncRNA)
-    # Format 2: May have additional underscores in Target_Gene_ID
-    
-    # Remove leading gRNA_ID (starts with gL_)
-    local temp="${query#gL_*_}"
-    
-    # Remove trailing _lncRNA or other suffixes
-    target_id="${temp%_lncRNA*}"
-    target_id="${temp%_lncRNA}"
-    
-    # If we still have a valid ID, use it
-    if [[ "$target_id" =~ ^Hum_XLOC_[0-9]+ ]]; then
-        echo "$target_id"
-    fi
-}
+echo "Processing PSL file to extract gRNA_IDs, strands, and column 14..."
 
 # Process PSL file
 {
@@ -68,65 +55,147 @@ extract_target_id() {
             continue
         fi
         
-        # Parse the line - column 10 (index 9) contains the query name
+        # Parse the line
         IFS=$'\t' read -ra fields <<< "$line"
-        if [ ${#fields[@]} -ge 10 ]; then
-            query_name="${fields[9]}"
+        
+        # Check for at least 14 columns
+        if [ ${#fields[@]} -ge 14 ]; then
+            query_name="${fields[9]}"  # Column 10 (e.g., gL_000182_Hum_XLOC_000265_lncRNA)
+            target_col14="${fields[13]}" # Column 14 (e.g., sp|...(+))
             
-            # Extract Target_Gene_ID using more robust parsing
-            if [[ "$query_name" =~ gL_[0-9]+_([^_]+_[^_]+_[0-9]+)_lncRNA ]]; then
-                target_id="${BASH_REMATCH[1]}"
-                psl_targets["$target_id"]=1
-            elif [[ "$query_name" =~ _((Hum_XLOC_[0-9]+))_ ]]; then
-                target_id="${BASH_REMATCH[1]}"
-                psl_targets["$target_id"]=1
+            # Extract strand from column 14
+            psl_strand=""
+            if [[ "$target_col14" == *"(+)" ]]; then
+                psl_strand="+"
+            elif [[ "$target_col14" == *"(-)" ]]; then
+                psl_strand="-"
+            fi
+            
+            # Extract gRNA_ID from query_name
+            if [[ "$query_name" =~ ^(gL_[0-9]+) ]]; then
+                gRNA_id_key="${BASH_REMATCH[1]}"
+                
+                # Store strand and col14 value using gRNA_ID as the key
+                # Note: If a gRNA_ID appears multiple times, this stores the *last* one found.
+                psl_strands["$gRNA_id_key"]="$psl_strand"
+                psl_col14["$gRNA_id_key"]="$target_col14"
             fi
         fi
     done
 } < "$INPUT_PSL"
 
-NUM_IDS=${#psl_targets[@]}
-echo "Found $NUM_IDS unique Target_Gene_IDs in PSL file"
+NUM_IDS=${#psl_strands[@]}
+echo "Found $NUM_IDS unique gRNA_IDs in PSL file"
 
 # Debug: Show first few IDs found (optional)
 if [ $NUM_IDS -gt 0 ]; then
-    echo "Sample Target_Gene_IDs found:"
+    echo "Sample gRNA_IDs found:"
     count=0
-    for id in "${!psl_targets[@]}"; do
-        echo "  - $id"
+    for id in "${!psl_strands[@]}"; do
+        echo "  - $id (Strand: ${psl_strands[$id]})"
         ((count++))
         [ $count -ge 3 ] && break
     done
 fi
 
-echo "Processing CSV file and adding match_pc column..."
+echo "Processing CSV file and adding/replacing match_pc and psl_target_col14 columns..."
 
 # Process CSV file
 {
     # Read and modify header
     IFS=$'\t' read -r header
-    echo -e "${header}\tmatch_pc"
     
+    # *** CORRECTION: Read header into array to replace cols 8/9 ***
+    IFS=$'\t' read -ra header_fields <<< "$header"
+    
+    # Assume input has at least 7 columns.
+    # We will print the first 7 header columns, then our new 8th and 9th.
+    if [ ${#header_fields[@]} -ge 7 ]; then
+        col1_h="${header_fields[0]}"
+        col2_h="${header_fields[1]}"
+        col3_h="${header_fields[2]}"
+        col4_h="${header_fields[3]}"
+        col5_h="${header_fields[4]}"
+        col6_h="${header_fields[5]}"
+        col7_h="${header_fields[6]}"
+        # Print first 7 headers + new 8th and 9th headers
+        echo -e "${col1_h}\t${col2_h}\t${col3_h}\t${col4_h}\t${col5_h}\t${col6_h}\t${col7_h}\tmatch_pc\tpsl_target_col14"
+    else
+        # Fallback for 6-column file (original logic)
+        echo -e "${header}\tmatch_pc\tpsl_target_col14"
+    fi
+
     # Process data rows
     row_count=0
     matched_count=0
     unmatched_count=0
     
     while IFS=$'\t' read -r line; do
-        # Extract Target_Gene_ID (first field)
-        target_gene_id="${line%%$'\t'*}"
+        IFS=$'\t' read -ra csv_fields <<< "$line"
         
-        # Check if ID exists in PSL targets
-        if [[ -n "${psl_targets[$target_gene_id]}" ]]; then
-            match_value="YES"
-            ((matched_count++))
+        # *** CORRECTION: Check for at least 6 columns (for gRNA_ID and Strand) ***
+        # We need col 3 and col 6, so at least 6 columns.
+        if [ ${#csv_fields[@]} -lt 6 ]; then
+            echo "Skipping malformed CSV line: $line" >&2
+            continue
+        fi
+        
+        # *** CORRECTION 1: Get gRNA_ID (col 3) ***
+        gRNA_id="${csv_fields[2]}"
+        
+        # Get lncRNA_Strand (col 6)
+        csv_strand_raw="${csv_fields[5]}" # e.g., (+) or (-)
+        
+        # Normalize CSV strand
+        csv_strand_norm=""
+        if [[ "$csv_strand_raw" == "(+)" ]]; then
+            csv_strand_norm="+"
+        elif [[ "$csv_strand_raw" == "(-)" ]]; then
+            csv_strand_norm="-"
+        fi
+        
+        # New logic with strand check
+        match_value="NO"
+        col14_value="NA" # Default value if no match
+        
+        # Check if gRNA_id exists in the PSL data (using the correct key)
+        if [[ -n "${psl_strands[$gRNA_id]}" ]]; then
+            # ID exists, get stored PSL strand and col14 value
+            psl_strand_val="${psl_strands[$gRNA_id]}"
+            col14_value="${psl_col14[$gRNA_id]}"
+            
+            # Check for strand coincidence (and that CSV strand was valid)
+            if [[ -n "$csv_strand_norm" && "$csv_strand_norm" == "$psl_strand_val" ]]; then
+                match_value="YES"
+                ((matched_count++))
+            else
+                # ID matched, but strand did not (or CSV/PSL strand was blank/invalid)
+                ((unmatched_count++))
+            fi
         else
-            match_value="NO"
+            # ID did not match
             ((unmatched_count++))
         fi
         
-        # Output line with match value
-        echo -e "${line}\t${match_value}"
+        # *** CORRECTION 2: Rebuild output line to replace cols 8/9 ***
+        # This logic assumes the input file has at least 7 columns
+        # and we want to output 9 columns total.
+        if [ ${#csv_fields[@]} -ge 7 ]; then
+            col1="${csv_fields[0]}"
+            col2="${csv_fields[1]}"
+            col3="${csv_fields[2]}" # This is gRNA_id
+            col4="${csv_fields[3]}"
+            col5="${csv_fields[4]}"
+            col6="${csv_fields[5]}" # This is csv_strand_raw
+            col7="${csv_fields[6]}" # e.g., the 0.912 column
+            
+            # Print first 7 cols + new 8th and 9th cols
+            echo -e "${col1}\t${col2}\t${col3}\t${col4}\t${col5}\t${col6}\t${col7}\t${match_value}\t${col14_value}"
+        else
+            # Fallback for 6-column file (original logic)
+            echo -e "${line}\t${match_value}\t${col14_value}"
+        fi
+
         ((row_count++))
         
         # Progress indicator for large files
@@ -137,14 +206,34 @@ echo "Processing CSV file and adding match_pc column..."
     
     echo "Processing complete!" >&2
     echo "Total data rows processed: $row_count" >&2
-    echo "Rows with matches: $matched_count" >&2
-    echo "Rows without matches: $unmatched_count" >&2
+    echo "Rows with strand-coincident matches: $matched_count" >&2
+    echo "Rows without matches (or strand mismatch): $unmatched_count" >&2
     
-} < "$INPUT_CSV" > "$OUTPUT_CSV"
+} < "$INPUT_CSV" > "$OUTPUT_CSV".tmp
 
+# Finally, change the names of the groups
+awk 'BEGIN{
+    FS="\t"; OFS="\t";
+    # Define the replacement map
+    map["Shared"] = "Core";
+    map["Partially shared"] = "Common";
+    map["Cell-type specific"] = "Specific";
+}
+{
+    # Check if the value of column 2 is a key in our map
+    if ($2 in map) {
+        $2 = map[$2]; # If yes, replace it with the maps value
+    }
+    # Print the entire line (either modified or as-is)
+    print
+}' "$OUTPUT_CSV".tmp > "$OUTPUT_CSV"
+
+rm -rf "$OUTPUT_CSV".tmp
 echo "Output written to: $OUTPUT_CSV"
 
 # Validation check
+# Note: This check might fail if the input was 6 columns and output is 8
+# A better check is that output lines >= input lines (due to header)
 output_lines=$(wc -l < "$OUTPUT_CSV")
 input_lines=$(wc -l < "$INPUT_CSV")
 

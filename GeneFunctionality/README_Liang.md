@@ -72,7 +72,7 @@ predictions, an effective measure of the model accuracy can be tested.
 # Get a list of Ensembl ids. This script aligns gRNAs against the 
 # full human genome (GRCh38) and then intersects the results with 
 # a dedicated GENCODE lncRNA annotation file. The final report includes 
-# ALL BLAT hits; if a hit does not overlap a lncRNA, "NA" is reported in 
+# antisense BLAT hits only; if a hit does not overlap a lncRNA, "NA" is reported in 
 # lncRNA fields.
 ./find_lncRNA_guides.sh ../data/Liang/LiangMuller_May2025_Table1_Filtered-gRNAs.csv ../data/Liang/LiangMuller_May2025-Table3-Gene-RRA-Ranking.csv
 
@@ -82,7 +82,7 @@ predictions, an effective measure of the model accuracy can be tested.
 # script to create a filtered and sorted report. For each unique
 # combination of a Target_Gene_ID, lncRNA_ENSG_ID, and gRNA_ID, it
 # keeps a single entry. The final output is then sorted by the Target_Gene_ID.
-./filter_unique_hits.sh ../results/gRNA_lncRNA_matches.tsv
+./filter_unique_hits.sh ../results/gRNA_lncRNA_antisense_matches.tsv
 
 
 # Get the number of unique essential target gene ids.
@@ -105,11 +105,7 @@ tail -n +2 ../results/gRNA_lncRNA_matches_unique_sorted.tsv | cut -f3 | sort -u 
 # the highest probability. It then keeps ALL gRNA records that
 # target that single best lncRNA. If a gene only has non-matches
 # (NA), it keeps one of those records. The final output is sorted.
-./select_best_hit.sh ../results/gRNA_lncRNA_matches_with_prob.tsv
-
-
-# TODO: Plot the resulting data using an R script.
-# Lets use a similar script to essential_prob_distribution_Liang.R
+./select_best_hit.sh ../results/gRNA_lncRNA_matches_with_prob.tsv # This script creates '../results/gRNA_lncRNA_matches_best_hit_multi.tsv' file used downstream in mRNA comparisson.
 
 
 # Filter just ENSG IDs without model probability assigned
@@ -121,12 +117,46 @@ tail -n +2 ../results/gRNA_lncRNA_matches_unique_sorted.tsv | cut -f3 | sort -u 
 
 
 # Get the number of unique essential target gene ids that matched at least one ENSG Id
-tail -n +2 results/gRNA_lncRNA_matches_with_prob.tsv | awk -F'\t' '$9 != "NA"' | cut -f1 | sort -u | wc -l
+tail -n +2 ../results/gRNA_lncRNA_matches_with_prob.tsv | awk -F'\t' '$5 != "NA"' | cut -f1 | sort -u | wc -l
 
 
 # Get basic stats from the lncRNA annotations file
 ./analyze_gtf_stats.sh ../data/references/gencode.v49.long_noncoding_RNAs.gtf
+```
+
+## Step 6: Get mRNA readings to cure the lncRNA list of essentials
+
+This step involves finding protein coding genes that will attach to the list of gRNAs from the previous step. 
+The objective is to flag those that match both lncRNA and mRNA in the same strand so that the list of lncRNAs 
+is clean and really essential.
+
+```bash
+
+# Obtain mRNA readings
+# Download uniprot data for human proteins
+curl -X GET "https://rest.uniprot.org/uniprotkb/stream?query=(organism_id:9606)&format=fasta&compressed=true" \
+  -H "Accept: application/gzip" \
+  -o uniprotkb_AND_model_organism_9606_AND_r_2025_10_29.fasta.gz
+
+# Index the genome
+miniprot -t8 -d GRCh38.genome.mpi GRCh38.primary_assembly.genome.fa
+
+# Align the protein sequences from uniprot with the genome
+miniprot --aln -N 0 GRCh38.genome.mpi uniprotkb_AND_model_organism_9606_AND_r_2025_10_29.fasta.gz > proteome-human-proteins.miniprot.aln
+
+# Convert the alignment to fasta format
+python3 parse_aln_to_fasta_long.py proteome-human-proteins.miniprot.aln GRCh38.primary_assembly.genome.fa human_proteins_long.fasta
+
+# Run the blat command
+blat -t=dna -q=dna ../data/references/human_proteins_long.fasta ../data/Liang/processed/Supplementary_tableS1_gRNAs.fasta -minScore=15 -minIdentity=100 ../data/Liang/processed/tableS1_gRNAs_vs_mRNA.psl -noHead
+
+# Keep just antisense results
+awk '$9 ~ /^-/' ../data/Liang/processed/tableS1_gRNAs_vs_mRNA.psl > ../data/Liang/processed/tableS1_gRNAs_vs_mrna_antisense_only.psl
+
+# Compare both lists (lncRNA and mRNA), keep those without matches in mRNA sequences.
+./add_match_column_optimized.sh ../results/gRNA_lncRNA_matches_best_hit_multi.tsv ../data/Liang/processed/tableS1_gRNAs_vs_mrna.psl ../results/gRNA_essential_matches_optimized.tsv
 
 
 ```
+## Step 7: Plot the resulting data using an R script.
 

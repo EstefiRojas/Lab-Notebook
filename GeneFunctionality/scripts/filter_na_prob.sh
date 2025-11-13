@@ -64,9 +64,9 @@ FNR == 1 {
     # Condition 1: ENSG ID is not "NA"
     # Condition 2: highest_prob is "NA"
     # Condition 3: We have not seen this ENSG ID before
-    if ($9 != "NA" && $13 == "NA" && !($9 in seen_ensg)) {
+    if ($5 != "NA" && $7 == "NA" && !($5 in seen_ensg)) {
         print $0;
-        seen_ensg[$9] = 1; # Mark this ENSG ID as seen
+        seen_ensg[$5] = 1; # Mark this ENSG ID as seen
     }
 }
 ' "$INPUT_FILE" > "$OUTPUT_FILE"
