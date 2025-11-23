@@ -6,7 +6,7 @@
 # It correctly reads the strand from CSV col 6.
 # It also now REPLACES columns 8 and 9 instead of appending.
 #
-# Usage: ./correct_match_script.sh input.csv input.psl output.csv
+# Usage: ./correct_match_script.sh input.tsv input.psl output.csv
 
 # Check bash version (associative arrays require bash 4+)
 if [ "${BASH_VERSION%%.*}" -lt 4 ]; then
@@ -98,14 +98,14 @@ if [ $NUM_IDS -gt 0 ]; then
     done
 fi
 
-echo "Processing CSV file and adding/replacing match_pc and psl_target_col14 columns..."
+echo "Processing CSV file and adding match_pc, mRNA_ID, and mRNA_strand columns..."
 
 # Process CSV file
 {
     # Read and modify header
     IFS=$'\t' read -r header
     
-    # *** CORRECTION: Read header into array to replace cols 8/9 ***
+    # Read header into array to replace cols 8/9
     IFS=$'\t' read -ra header_fields <<< "$header"
     
     # Assume input has at least 7 columns.
@@ -133,14 +133,14 @@ echo "Processing CSV file and adding/replacing match_pc and psl_target_col14 col
     while IFS=$'\t' read -r line; do
         IFS=$'\t' read -ra csv_fields <<< "$line"
         
-        # *** CORRECTION: Check for at least 6 columns (for gRNA_ID and Strand) ***
+        # Check for at least 6 columns (for gRNA_ID and Strand)
         # We need col 3 and col 6, so at least 6 columns.
         if [ ${#csv_fields[@]} -lt 6 ]; then
             echo "Skipping malformed CSV line: $line" >&2
             continue
         fi
         
-        # *** CORRECTION 1: Get gRNA_ID (col 3) ***
+        # Get gRNA_ID (col 3) ***
         gRNA_id="${csv_fields[2]}"
         
         # Get lncRNA_Strand (col 6)
@@ -177,7 +177,7 @@ echo "Processing CSV file and adding/replacing match_pc and psl_target_col14 col
             ((unmatched_count++))
         fi
         
-        # *** CORRECTION 2: Rebuild output line to replace cols 8/9 ***
+        # Rebuild output line to replace cols 8/9
         # This logic assumes the input file has at least 7 columns
         # and we want to output 9 columns total.
         if [ ${#csv_fields[@]} -ge 7 ]; then
@@ -232,8 +232,6 @@ rm -rf "$OUTPUT_CSV".tmp
 echo "Output written to: $OUTPUT_CSV"
 
 # Validation check
-# Note: This check might fail if the input was 6 columns and output is 8
-# A better check is that output lines >= input lines (due to header)
 output_lines=$(wc -l < "$OUTPUT_CSV")
 input_lines=$(wc -l < "$INPUT_CSV")
 

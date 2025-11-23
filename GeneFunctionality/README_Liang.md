@@ -14,7 +14,6 @@ First, we convert the relevant columns from the source CSV file into a separate 
 
 ./csv_to_fasta.sh ../data/Liang/LiangMuller_May2025_Table1_Filtered-gRNAs.csv 1-2 4 3 > ../data/Liang/processed/Supplementary_tableS1_gRNAs.fasta
 
-
 ```
 
 
@@ -108,11 +107,12 @@ tail -n +2 ../results/gRNA_lncRNA_matches_unique_sorted.tsv | cut -f3 | sort -u 
 ./select_best_hit.sh ../results/gRNA_lncRNA_matches_with_prob.tsv # This script creates '../results/gRNA_lncRNA_matches_best_hit_multi.tsv' file used downstream in mRNA comparisson.
 
 
-# Filter just ENSG IDs without model probability assigned
+# [OPTIONAL]
+# Filter ENSG IDs without model probability assigned
 ./filter_na_prob.sh ../results/gRNA_lncRNA_matches_with_prob.tsv
 
 
-# Obtain exon1 and exon2 sequences from ENSG IDs without probability assigned
+# Obtain exon1 and exon2 sequences from ENSG IDs without probability assigned so that it can be run with our model
 ./get_exon_sequences.sh ../results/gRNA_lncRNA_matches_unique_ensg_na_prob.tsv
 
 
@@ -122,13 +122,12 @@ tail -n +2 ../results/gRNA_lncRNA_matches_with_prob.tsv | awk -F'\t' '$5 != "NA"
 
 # Get basic stats from the lncRNA annotations file
 ./analyze_gtf_stats.sh ../data/references/gencode.v49.long_noncoding_RNAs.gtf
+
 ```
 
 ## Step 6: Get mRNA readings to cure the lncRNA list of essentials
 
-This step involves finding protein coding genes that will attach to the list of gRNAs from the previous step. 
-The objective is to flag those that match both lncRNA and mRNA in the same strand so that the list of lncRNAs 
-is clean and really essential.
+This step involves finding protein coding genes that will attach to the list of gRNAs from the previous step.
 
 ```bash
 
@@ -145,18 +144,22 @@ miniprot -t8 -d GRCh38.genome.mpi GRCh38.primary_assembly.genome.fa
 miniprot --aln -N 0 GRCh38.genome.mpi uniprotkb_AND_model_organism_9606_AND_r_2025_10_29.fasta.gz > proteome-human-proteins.miniprot.aln
 
 # Convert the alignment to fasta format
-python3 parse_aln_to_fasta_long.py proteome-human-proteins.miniprot.aln GRCh38.primary_assembly.genome.fa human_proteins_long.fasta
+python3 parse_aln_to_fasta.py proteome-human-proteins.miniprot.aln GRCh38.primary_assembly.genome.fa human_proteins.fasta
 
 # Run the blat command
-blat -t=dna -q=dna ../data/references/human_proteins_long.fasta ../data/Liang/processed/Supplementary_tableS1_gRNAs.fasta -minScore=15 -minIdentity=100 ../data/Liang/processed/tableS1_gRNAs_vs_mRNA.psl -noHead
+blat -t=dna -q=dna ../data/references/human_proteins.fasta ../data/Liang/processed/Supplementary_tableS1_gRNAs.fasta -minScore=15 -minIdentity=100 ../data/Liang/processed/tableS1_gRNAs_vs_mRNA_no_introns.psl -noHead
 
 # Keep just antisense results
-awk '$9 ~ /^-/' ../data/Liang/processed/tableS1_gRNAs_vs_mRNA.psl > ../data/Liang/processed/tableS1_gRNAs_vs_mrna_antisense_only.psl
+awk '$9 ~ /^-/' ../data/Liang/processed/tableS1_gRNAs_vs_mRNA_no_introns.psl > ../data/Liang/processed/tableS1_gRNAs_vs_mrna_no_introns_antisense_only.psl
 
-# Compare both lists (lncRNA and mRNA), keep those without matches in mRNA sequences.
-./add_match_column_optimized.sh ../results/gRNA_lncRNA_matches_best_hit_multi.tsv ../data/Liang/processed/tableS1_gRNAs_vs_mrna.psl ../results/gRNA_essential_matches_optimized.tsv
+# Compare both lists (lncRNA and mRNA), mark those that matched both lncRNA and mRNA with the same gRNA in the same strand.
+./add_match_column_optimized.sh ../results/gRNA_lncRNA_matches_best_hit_multi.tsv ../data/Liang/processed/tableS1_gRNAs_vs_mrna_no_introns_antisense_only.psl ../results/gRNA_essential_matches_no_introns_optimized.tsv
 
-
+# Add the lncRNA gene name
+./map_lncRNA_genes.sh ../results/gRNA_essential_matches_no_introns_optimized.tsv ../data/references/gencode.v49.long_noncoding_RNAs.gtf
 ```
 ## Step 7: Plot the resulting data using an R script.
+
+This step uses the script `Liang_essentials_boxplot.R`.
+
 

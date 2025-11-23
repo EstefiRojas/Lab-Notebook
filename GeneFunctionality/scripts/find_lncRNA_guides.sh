@@ -286,7 +286,7 @@ FNR==NR {
 }' "$BLAT_OUTPUT_BED" "$GRNA_METADATA_MAP" >> "$FINAL_REPORT"
 
 # Clean up intermediate files from the tmp directory
-#rm "$TMP_DIR"/*
+rm "$TMP_DIR"/*
 
 echo ""
 echo "--- Workflow Complete! ---"
