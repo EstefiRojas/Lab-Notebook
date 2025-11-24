@@ -52,13 +52,15 @@ blat -t=dna -q=dna ../data/model_predictions/lncrna_exon2.fasta ../data/Liang/pr
 
 ```
 
-
 ## Step 4: Visualize the distribution differences
 
 Using the R script `essential_prob_distribution_Liang.R`, a violin plot is generated. This script joins exon1 and exon2 data and keeps 
 the maximum probability for each gene id. Then computes a K-S stat between the four groups: Shared, Partially shared, Cell-type specific, 
 and Non-essential.
 
+
+# Better approach
+The previous steps just considered lncRNAs that already have a probability assigned by our models at the date of writing for the blat against the gRNAs. In the following approach, we will run a blat match against all lncRNAs reported to date. This will generate an exhaustive list of all lncRNA to which the gRNAs attach to.
 
 ## Step 5: Obtain a list of lncRNA sequences to test the model
 

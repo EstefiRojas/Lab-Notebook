@@ -25,19 +25,24 @@ BEGIN {
     # Load Essentiality Map
     while ((getline < "'"$DATA_DIR/Huang/column_matches_ensgids.csv"'") > 0) {
         # Skip header if needed, but logic below handles empty checks
-        # Col 1 is GeneID
-        # Col 2,3,4 are cell lines
-        count = 0
-        if ($2 != "") count++
-        if ($3 != "") count++
-        if ($4 != "") count++
+        # Col 5 is GeneID (ENSG ids)
+        # Col 1,2,3 are cell lines (HeLa, Huh7, MCF7)
+        gene_id = $5
+        gsub(/\r/, "", gene_id)
         
-        if (count >= 2) {
-            ess_map[$1] = "Common"
-        } else if (count == 1) {
-            ess_map[$1] = "Specific"
-        } else {
-            ess_map[$1] = "Non-essential"
+        if (gene_id ~ /^ENSG/) {
+            count = 0
+            if ($1 != "") count++
+            if ($2 != "") count++
+            if ($3 != "") count++
+            
+            if (count >= 2) {
+                ess_map[gene_id] = "Common"
+            } else if (count == 1) {
+                ess_map[gene_id] = "Specific"
+            } else {
+                ess_map[gene_id] = "Non-essential"
+            }
         }
     }
     close("'"$DATA_DIR/Huang/column_matches_ensgids.csv"'")

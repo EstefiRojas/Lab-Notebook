@@ -171,7 +171,38 @@ FNR > 5 {
     
     print study, grna_id, target_gene, type, essentiality, ensg_with_version, strand, prob_func, prot_match
 }
-' "$GENOME_PSL" > "$RESULTS_DIR/unified_genome_alignments.csv"
+' "$GENOME_PSL" > "$RESULTS_DIR/unified_genome_alignments_raw.csv"
+
+# Step 4.5: Apply Liang Filters (Unique Hits & Best Hit Selection)
+echo "Applying Liang filters (Unique Hits & Best Hit Selection)..."
+./apply_liang_filters.sh "$RESULTS_DIR/unified_genome_alignments_raw.csv" "$RESULTS_DIR/unified_genome_alignments.csv"
+
+# Step 4.6: Append Unmatched gRNAs
+echo "Appending unmatched gRNAs..."
+awk -F',' '
+BEGIN { OFS="," }
+# 1. Read the filtered alignments (File 1)
+# Store seen gRNAs
+NR==FNR {
+    # Key: Study|gRNA_ID|Target_Gene_ID
+    # Columns: 1:Study, 2:gRNA_ID, 3:Target_Gene_ID
+    key = $1 "|" $2 "|" $3
+    seen[key] = 1
+    next
+}
+# 2. Read the original unified CSV (File 2)
+# Columns: 1:Study, 2:gRNA_ID, 3:Target_Gene_ID, 4:Sequence, 5:gRNA_Type, 6:Essentiality
+FNR > 1 {
+    key = $1 "|" $2 "|" $3
+    
+    if (!(key in seen)) {
+        # Construct the line with NAs
+        # Output format: Study,gRNA_ID,Target_Gene_ID,gRNA_Type,Essentiality,ENSG_ID,Strand,Probability_Functional,Protein_Off_Target
+        # Input cols: 1, 2, 3, 5, 6
+        print $1, $2, $3, $5, $6, "NA", "NA", "NA", "NA"
+    }
+}
+' "$RESULTS_DIR/unified_genome_alignments.csv" "$UNIFIED_CSV" >> "$RESULTS_DIR/unified_genome_alignments.csv"
 
 # Step 5: Add gRNA sequences from FASTA
 echo "Adding gRNA sequences to results..."
@@ -211,6 +242,6 @@ FNR==1 {
 
 # Replace original with new version
 mv "$RESULTS_DIR/unified_genome_alignments_with_seq.csv" "$RESULTS_DIR/unified_genome_alignments.csv"
-rm "$RESULTS_DIR/grna_seq_map.csv"
+rm "$RESULTS_DIR/grna_seq_map.csv" "$RESULTS_DIR/unified_genome_alignments_raw.csv"
 
 echo "Analysis complete. Results in $RESULTS_DIR/unified_genome_alignments.csv"

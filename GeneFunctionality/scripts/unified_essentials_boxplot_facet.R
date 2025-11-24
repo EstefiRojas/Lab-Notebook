@@ -17,15 +17,34 @@ essentiality_labels <- c("Non", "Specific", "Common", "Core")
 ess_d <- ess_d %>%
   mutate(Essentiality = factor(Essentiality, levels = essentiality_values, labels = essentiality_labels))
 
-# --- MODIFICATION: Group by Study AND GeneID ---
-# We must include 'Study' in the grouping to ensure we keep the best candidate 
-# per gene *within each study*, rather than globally.
+# Group by Study AND GeneID
 filtered_df <- ess_d %>%
   group_by(Study, ENSG_ID) %>%
   slice_max(order_by = Probability_Functional, n = 1, with_ties = FALSE) %>%
   ungroup()
 
-# --- MODIFICATION: Calculate KS stats PER STUDY ---
+# --- MODIFICATION: Create Labels with Counts per Study ---
+# 1. Calculate counts per Study + Essentiality
+counts_df <- filtered_df %>%
+  group_by(Study, Essentiality) %>%
+  summarise(n = n(), .groups = "drop") %>%
+  mutate(Label_With_Count = paste0(Essentiality, "\n(n=", n, ")"))
+
+# 2. Join back to filtered_df
+filtered_df <- filtered_df %>%
+  left_join(counts_df, by = c("Study", "Essentiality"))
+
+# 3. Ensure the new labels are ordered correctly (Non -> Specific -> Common -> Core)
+# We sort by the original Essentiality factor to define the factor levels for the new labels
+label_levels <- filtered_df %>%
+  arrange(Study, Essentiality) %>%
+  pull(Label_With_Count) %>%
+  unique()
+
+filtered_df$Label_With_Count <- factor(filtered_df$Label_With_Count, levels = label_levels)
+
+
+# --- Calculate KS stats PER STUDY ---
 
 # Define groups
 reference_group <- "Non"
@@ -45,12 +64,12 @@ compute_study_stats <- function(df_subset, study_name) {
       filter(Essentiality == group) %>%
       pull(Probability_Functional)
     
-    # Only run test if we have data points
+    # Only run test if we have data points in both groups
     if(length(comp_data) > 0 && length(ref_data) > 0) {
       ks_result <- ks.test(ref_data, comp_data)
       
       return(data.frame(
-        Study = study_name, # Important: Include Study column for faceting
+        Study = study_name, 
         Essentiality = group,
         label = paste0("KS=", round(ks_result$statistic, 2)),
         y_position = 1.1 
@@ -69,13 +88,16 @@ all_stats_labels <- filtered_df %>%
   lapply(function(subset_df) {
     compute_study_stats(subset_df, unique(subset_df$Study))
   }) %>%
-  do.call(rbind, .)
+  do.call(rbind, .) %>%
+  # Join with counts_df to get the correct Label_With_Count for placing the text
+  left_join(counts_df, by = c("Study", "Essentiality"))
 
 
 # --- Generate the Faceted Plot ---
 
 plot_modified <- ggplot(data = filtered_df,
-                        aes(x = Essentiality, y = Probability_Functional, 
+                        # Update x to use the new label with counts
+                        aes(x = Label_With_Count, y = Probability_Functional, 
                             fill = Essentiality, color = Essentiality)) +
   
   # 1. Add box plot (excluding Core)
@@ -84,7 +106,7 @@ plot_modified <- ggplot(data = filtered_df,
   
   # 2. Add points (for Core)
   geom_point(data = ~ subset(., Essentiality == "Core"),
-             size = 4, # Reduced size slightly to fit facets
+             size = 4,
              shape = 21, 
              color = "black",
              stroke = 1) +
@@ -93,8 +115,9 @@ plot_modified <- ggplot(data = filtered_df,
   scale_fill_brewer(palette = "Set2") +
   scale_colour_brewer(palette = "Set2") +
   
-  # 4. Facet by Study
-  facet_wrap(~ Study, scales = "fixed") + # Use scales="free_x" if x-groups vary wildly
+  # 4. Facet by Study with scales="free_x"
+  # This allows each facet to have its own unique x-axis labels (with different counts)
+  facet_wrap(~ Study, scales = "free_x") + 
   
   # 5. Legend guides
   guides(fill = guide_legend(override.aes = list(shape = 21, size = 5, color = "black"))) +
@@ -106,13 +129,14 @@ plot_modified <- ggplot(data = filtered_df,
     fill = "Essentiality Group"
   ) +
   
-  # 7. Theme (Adjusted text sizes for faceted view)
+  # 7. Theme
   theme_minimal() +
   theme(
     text = element_text(size = 20),
     plot.title = element_text(size = 30, hjust = 0.5),
-    strip.text = element_text(size = 24, face = "bold"), # Style for Study headers
-    axis.text.x = element_text(hjust = 0.5, size = 16),
+    strip.text = element_text(size = 24, face = "bold"), 
+    # Angle labels slightly if they get too long, or keep flat if space allows
+    axis.text.x = element_text(hjust = 0.5, size = 14), 
     axis.text.y = element_text(size = 18),
     axis.title = element_text(size = 24),
     panel.grid.major = element_line(color = "gray90"),
@@ -126,9 +150,10 @@ plot_modified <- ggplot(data = filtered_df,
 plot_final <- plot_modified +
   geom_text(
     data = all_stats_labels,
-    aes(x = Essentiality, y = y_position, label = label),
+    # Update x to use the new label with counts for text placement
+    aes(x = Label_With_Count, y = y_position, label = label),
     inherit.aes = FALSE, 
-    size = 5, # Reduced text size to fit panels
+    size = 5,
     color = "black",
     fontface = "bold"
   ) +
