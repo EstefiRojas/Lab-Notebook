@@ -8,7 +8,7 @@ library(ggsignif)
 essentials1_lncrna_data <- read.csv("../results/unified_genome_alignments.csv", header = TRUE)
 table(essentials1_lncrna_data$Study)
 
-ess_d <- essentials1_lncrna_data %>% filter(Protein_Off_Target == "NO")
+ess_d <- essentials1_lncrna_data %>% filter(Protein_Off_Target == "NO" & Study == "Liang")
 table(ess_d$Essentiality)
 # Define the desired order for the categorical variable
 essentiality_values <- c("Non-essential", "Specific", "Common", "Core")

@@ -136,6 +136,15 @@ NR>1 {
     gsub(/\r/, "", $0)
     if ($1 ~ /^LH/ && $2 != "") {
         gene_id = $1
+        
+        # Counter logic for unique gRNA ID
+        if (gene_id == prev_gene) {
+            counter++
+        } else {
+            counter = 1
+            prev_gene = gene_id
+        }
+        
         count = 0
         if (gene_id in counts) {
             count = counts[gene_id]
@@ -151,7 +160,10 @@ NR>1 {
             essentiality = "Non-essential"
         }
         
-        print "Liu," $1 "," $1 "," $2 ",lncRNA," essentiality >> "'"$UNIFIED_FILE"'"
+        # Use generated unique ID
+        grna_id = gene_id "_" counter
+        
+        print "Liu," grna_id "," gene_id "," $2 ",lncRNA," essentiality >> "'"$UNIFIED_FILE"'"
     }
 }' "$DATA_DIR/Liu/TableS2_gRNA_sequences.csv"
 

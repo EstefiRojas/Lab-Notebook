@@ -71,8 +71,7 @@ predictions, an effective measure of the model accuracy can be tested.
 ```bash
 
 # Get a list of Ensembl ids. This script aligns gRNAs against the 
-# full human genome (GRCh38) and then intersects the results with 
-# a dedicated GENCODE lncRNA annotation file. The final report includes 
+# full GENCODE lncRNA annotation file. The final report includes 
 # antisense BLAT hits only; if a hit does not overlap a lncRNA, "NA" is reported in 
 # lncRNA fields.
 ./find_lncRNA_guides.sh ../data/Liang/LiangMuller_May2025_Table1_Filtered-gRNAs.csv ../data/Liang/LiangMuller_May2025-Table3-Gene-RRA-Ranking.csv
