@@ -21,14 +21,14 @@ ess_d <- ess_d %>%
 
 # Keep only the max probability per GeneID
 filtered_df <- ess_d %>%
-  group_by(ENSG_ID) %>%
+  group_by(ENSG_ID, Essentiality) %>%
   # For each GeneID, keep only the row with the maximum Probability_Functional.
   # `with_ties = FALSE` ensures that if there's a tie, only one row is returned.
   slice_max(order_by = Probability_Functional, n = 1, with_ties = FALSE) %>%
   ungroup() # It's good practice to ungroup after the operation.
 
 
-table(filtered_df$Study)
+table(filtered_df$Essentiality)
 
 # --- Prepare Legend Labels with Record Counts ---
 

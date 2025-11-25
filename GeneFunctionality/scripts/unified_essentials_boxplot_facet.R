@@ -19,9 +19,12 @@ ess_d <- ess_d %>%
 
 # Group by Study AND GeneID
 filtered_df <- ess_d %>%
-  group_by(Study, ENSG_ID) %>%
+  group_by(ENSG_ID, Study, Essentiality) %>%
   slice_max(order_by = Probability_Functional, n = 1, with_ties = FALSE) %>%
   ungroup()
+
+
+
 
 # --- MODIFICATION: Create Unique Labels with Counts per Study ---
 # 1. Calculate counts per Study + Essentiality
