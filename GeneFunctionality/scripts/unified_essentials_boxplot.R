@@ -8,11 +8,11 @@ library(ggsignif)
 essentials1_lncrna_data <- read.csv("../results/unified_genome_alignments.csv", header = TRUE)
 table(essentials1_lncrna_data$Study)
 
-ess_d <- essentials1_lncrna_data %>% filter(Protein_Off_Target == "NO" & Study == "Liang")
+ess_d <- essentials1_lncrna_data %>% filter(Protein_Off_Target == "NO" & !is.na(Probability_Functional) & Study == "Liang")
 table(ess_d$Essentiality)
 # Define the desired order for the categorical variable
-essentiality_values <- c("Non-essential", "Specific", "Common", "Core")
-essentiality_labels <- c("Non", "Specific", "Common", "Core")
+essentiality_values <- c("Non-essential", "Rare", "Common", "Core")
+essentiality_labels <- c("Non", "Rare", "Common", "Core")
 
 # Reorder the 'Essentiality' column by converting it to a factor with specified levels
 ess_d <- ess_d %>%
@@ -49,7 +49,7 @@ new_labels <- setNames(
 
 # Define the pairwise comparisons to be performed
 #my_comparisons <- combn(essentiality_labels, 2, simplify = FALSE)
-my_comparisons <- list(c("Non","Specific"),
+my_comparisons <- list(c("Non","Rare"),
                        c("Non","Common"),
                        c("Non","Core"))
 
@@ -76,7 +76,7 @@ ks_test_custom <- function(x, y) {
 
 # Define your reference group and comparison groups
 reference_group <- "Non"
-comparison_groups <- c("Specific", "Common", "Core")
+comparison_groups <- c("Rare", "Common", "Core")
 
 # Extract the data for the reference group
 reference_data <- filtered_df %>%
@@ -119,7 +119,7 @@ plot_modified <- ggplot(data = filtered_df,
                na.rm = TRUE, outlier.shape = NA, color = "black", staplewidth = 0.5) +
   
   # 2. Add a jitter plot for the 'Shared' group
-  geom_point(data = ~ subset(., Essentiality == "Core"),
+  geom_jitter(data = ~ subset(., Essentiality == "Core"),
              size = 6, 
              shape = 21, 
              color = "black",

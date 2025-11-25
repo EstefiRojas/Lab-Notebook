@@ -48,6 +48,7 @@ if [ ! -f "$GENOME_FASTA" ]; then
 fi
 
 GENOME_PSL="$UNIFIED_DIR/unified_vs_genome.psl"
+#blat "$GENOME_FASTA" /dev/null /dev/null -tileSize=7 -makeOoc=7.ooc -repMatch=1024
 blat -t=dna -q=dna "$GENOME_FASTA" "$UNIFIED_FASTA" -minScore=15 -minIdentity=100 "$GENOME_PSL".tmp
 
 # Keep only antisense blat matches
@@ -66,6 +67,7 @@ if [ ! -f "$PROTEIN_FASTA" ]; then
     # Create empty matches file to avoid errors downstream
     touch "$PROTEIN_MATCHES"
 else
+    #blat "$PROTEIN_FASTA" /dev/null /dev/null -tileSize=7 -makeOoc=7.ooc -repMatch=1024
     blat -t=dna -q=dna "$PROTEIN_FASTA" "$UNIFIED_FASTA" -minScore=15 -minIdentity=100 "$PROTEIN_PSL".tmp
     awk '$9 ~ /^-/' "$PROTEIN_PSL".tmp > "$PROTEIN_PSL"
     rm "$PROTEIN_PSL".tmp

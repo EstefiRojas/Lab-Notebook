@@ -36,10 +36,12 @@ BEGIN {
             if ($2 != "") count++
             if ($3 != "") count++
             
-            if (count >= 2) {
+            if (count == 3) {
+                ess_map[gene_id] = "Core"
+            } else if (count == 2) {
                 ess_map[gene_id] = "Common"
             } else if (count == 1) {
-                ess_map[gene_id] = "Specific"
+                ess_map[gene_id] = "Rare"
             } else {
                 ess_map[gene_id] = "Non-essential"
             }
@@ -90,7 +92,7 @@ BEGIN {
         } else if (group == "Partially shared") {
             ess_map[$1] = "Common"
         } else if (group == "Cell-type specific") {
-            ess_map[$1] = "Specific"
+            ess_map[$1] = "Rare"
         } else {
             ess_map[$1] = "Non-essential"
         }
@@ -155,7 +157,7 @@ NR>1 {
         } else if (count >= 2) {
             essentiality = "Common"
         } else if (count == 1) {
-            essentiality = "Specific"
+            essentiality = "Rare"
         } else {
             essentiality = "Non-essential"
         }
@@ -192,7 +194,7 @@ BEGIN {
         if (tolower(group) == "common") {
             ess_map[gene] = "Common"
         } else if (tolower(group) == "specific") {
-            ess_map[gene] = "Specific"
+            ess_map[gene] = "Rare"
         } else if (tolower(group) == "core") {
              ess_map[gene] = "Core"
         } else {
@@ -221,7 +223,7 @@ NR>1 {
     }
 }' "$DATA_DIR/Montero/Supplementary_table9_useThis.csv"
 
-echo "Processing Zhu et al..."
+#echo "Processing Zhu et al..."
 # Zhu: Supp_Table10.csv
 # ID: Col 1 (ID)
 # Gene: Col 2 (Target_gene)
@@ -229,20 +231,20 @@ echo "Processing Zhu et al..."
 # Type: Col 15 (Type)
 # Filter: Exclude if Type == "HOTAIR"
 # Essentiality: All "Non-essential"
-awk -F',' 'NR>1 {
-    gsub(/\r/, "", $0)
-    if ($15 != "HOTAIR") {
-        essentiality = "Non-essential"
-        # gRNA 1
-        if ($8 != "") {
-            print "Zhu," $1 "_1," $2 "," $8 "," $15 "," essentiality >> "'"$UNIFIED_FILE"'"
-        }
-        # gRNA 2
-        if ($13 != "") {
-            print "Zhu," $1 "_2," $2 "," $13 "," $15 "," essentiality >> "'"$UNIFIED_FILE"'"
-        }
-    }
-}' "$DATA_DIR/Zhu/Supp_Table10.csv"
+#awk -F',' 'NR>1 {
+#    gsub(/\r/, "", $0)
+#    if ($15 != "HOTAIR") {
+#        essentiality = "Non-essential"
+#        # gRNA 1
+#        if ($8 != "") {
+#            print "Zhu," $1 "_1," $2 "," $8 "," $15 "," essentiality >> "'"$UNIFIED_FILE"'"
+#        }
+#        # gRNA 2
+#        if ($13 != "") {
+#            print "Zhu," $1 "_2," $2 "," $13 "," $15 "," essentiality >> "'"$UNIFIED_FILE"'"
+#        }
+#    }
+#}' "$DATA_DIR/Zhu/Supp_Table10.csv"
 
 echo "Unified dataset created at $UNIFIED_FILE"
 # Count rows

@@ -5,7 +5,7 @@ set -e
 
 # Check arguments
 if [ "$#" -ne 2 ]; then
-    echo "Usage: $0 <input_tsv_file> <gencode_gtf_file>"
+    echo "Usage: $0 <input_csv_file> <gencode_gtf_file>"
     exit 1
 fi
 
@@ -14,7 +14,7 @@ GTF_FILE=$2
 TEMP_PRELIM="temp_preliminary.tsv"
 TEMP_MISSING="temp_missing_ids.txt"
 TEMP_API_MAP="temp_api_mapping.tsv"
-FINAL_OUTPUT="annotated_output.tsv"
+FINAL_OUTPUT="../results/annotated_unified_genome_alignments.csv"
 
 echo "========================================================"
 echo "   Gene Annotator: GTF + Coordinate-Based API Lookup"
@@ -31,8 +31,8 @@ echo "[1/4] Mapping names and extracting coordinates from GTF..."
 # We use AWK to build two maps:
 # 1. ID -> Name
 # 2. ID -> Chr:Start:End
-awk -F'\t' '
-BEGIN { OFS="\t" }
+awk '
+BEGIN { OFS="," }
 FNR==NR {
     if ($3 == "gene") {
         gid=""; gname=""
@@ -55,9 +55,14 @@ FNR==NR {
     next
 }
 {
-    if (FNR == 1) { print $0, "Gene_Name" }
+    if (FNR == 1) { 
+        sub(/\r$/, "", $0)
+        print $0, "Gene_Name" 
+    }
     else {
-        split($5, a, "."); id=a[1]
+        sub(/\r$/, "", $0)
+        # CSV Input: ENSG_ID is in column 6
+        split($6, a, "."); id=a[1]
         val = "NA"
         
         # Try to name it locally
@@ -72,17 +77,18 @@ FNR==NR {
     # Side channel: Create a coordinate file for missing items
     # We only write to this if we failed to find a name
     if (FNR > 1) {
-        split($5, a, "."); id=a[1]
+        split($6, a, "."); id=a[1]
         val = "NA"
         if (id in map && map[id] != id && map[id] !~ /^ENSG/) val = map[id]
         
         if (val == "NA" && (id in coords)) {
             # Write to specific file: ID, Chr, Start, End
-            print id, coords[id] > "'"$TEMP_MISSING"'"
+            # Explicitly use tabs for Python script compatibility
+            print id "\t" coords[id] > "'"$TEMP_MISSING"'"
         }
     }
 }
-' <($CAT_CMD "$GTF_FILE") "$INPUT_FILE" > "$TEMP_PRELIM"
+' FS='\t' <($CAT_CMD "$GTF_FILE") FS=',' "$INPUT_FILE" > "$TEMP_PRELIM"
 
 # ---------------------------------------------------------
 # PHASE 2: Check Missing
@@ -182,71 +188,71 @@ if remaining:
 # ==============================================================================
 # 2. Ensembl REST API (ID Lookup)
 # ==============================================================================
-remaining = get_remaining_ids()
-if remaining:
-    sys.stderr.write(f"\n   > Ensembl API: {len(remaining)} IDs\n")
-    total = len(remaining)
-    
-    for i, ens_id in enumerate(remaining, 1):
-        print_progress(i, total, "Querying")
-        try:
-            url = f"https://rest.ensembl.org/lookup/id/{ens_id}?content-type=application/json"
-            req = urllib.request.Request(url)
-            with urllib.request.urlopen(req, context=ctx) as res:
-                data = json.loads(res.read().decode())
-                if "display_name" in data and data["display_name"]:
-                     name = data["display_name"]
-                     if not name.startswith("ENSG"):
-                        results[ens_id] = name
-            time.sleep(0.07) 
-        except Exception:
-            pass
-
+#remaining = get_remaining_ids()
+#if remaining:
+#    sys.stderr.write(f"\n   > Ensembl API: {len(remaining)} IDs\n")
+#    total = len(remaining)
+#    
+#    for i, ens_id in enumerate(remaining, 1):
+#        print_progress(i, total, "Querying")
+#        try:
+#            url = f"https://rest.ensembl.org/lookup/id/{ens_id}?content-type=application/json"
+#            req = urllib.request.Request(url)
+#            with urllib.request.urlopen(req, context=ctx) as res:
+#                data = json.loads(res.read().decode())
+#                if "display_name" in data and data["display_name"]:
+#                     name = data["display_name"]
+#                     if not name.startswith("ENSG"):
+#                        results[ens_id] = name
+#            time.sleep(0.07) 
+#        except Exception:
+#            pass
+#
 # ==============================================================================
 # 3. LncBook (Search by Genomic Position)
 # ==============================================================================
-remaining = get_remaining_ids()
-if remaining:
-    sys.stderr.write(f"\n   > LncBook (Positional Search): {len(remaining)} IDs\n")
-    total = len(remaining)
-    
-    for i, ens_id in enumerate(remaining, 1):
-        print_progress(i, total, "Searching")
-        
-        coords = missing_data[ens_id]
-        chrom = coords['chr']
-        
-        # LncBook requires 'chr' prefix (e.g., chr1, chrX)
-        if not chrom.startswith("chr"):
-            chrom = f"chr{chrom}"
-            
-        start = coords['start']
-        end = coords['end']
-
-        try:
-            # Endpoint: Query genes by Region
-            # Note: We use the LncBook API specific to Genes, not EWAS
-            url = f"https://ngdc.cncb.ac.cn/lncbook/api/gene/region?chromosome={chrom}&start={start}&end={end}"
-            
-            req = urllib.request.Request(url)
-            with urllib.request.urlopen(req, context=ctx) as res:
-                data = json.loads(res.read().decode())
-                
-                # Structure: { "data": [ { "symbol": "LINC00...", ... } ], ... }
-                # Or direct list depending on version. Based on current NGDC API:
-                if "data" in data and len(data["data"]) > 0:
-                    # We take the first result that has a symbol
-                    for gene in data["data"]:
-                        if "symbol" in gene and gene["symbol"]:
-                            # Optional: Check overlap strictly? 
-                            # For now, assume the region query implies overlap
-                            results[ens_id] = gene["symbol"]
-                            break
-                            
-            time.sleep(0.2)
-        except Exception:
-            pass
-
+#remaining = get_remaining_ids()
+#if remaining:
+#    sys.stderr.write(f"\n   > LncBook (Positional Search): {len(remaining)} IDs\n")
+#    total = len(remaining)
+#    
+#    for i, ens_id in enumerate(remaining, 1):
+#        print_progress(i, total, "Searching")
+#        
+#        coords = missing_data[ens_id]
+#        chrom = coords['chr']
+#        
+#        # LncBook requires 'chr' prefix (e.g., chr1, chrX)
+#        if not chrom.startswith("chr"):
+#            chrom = f"chr{chrom}"
+#            
+#        start = coords['start']
+#        end = coords['end']
+#
+#        try:
+#            # Endpoint: Query genes by Region
+#            # Note: We use the LncBook API specific to Genes, not EWAS
+#            url = f"https://ngdc.cncb.ac.cn/lncbook/api/gene/region?chromosome={chrom}&start={start}&end={end}"
+#           
+#            req = urllib.request.Request(url)
+#            with urllib.request.urlopen(req, context=ctx) as res:
+#                data = json.loads(res.read().decode())
+#                
+#                # Structure: { "data": [ { "symbol": "LINC00...", ... } ], ... }
+#                # Or direct list depending on version. Based on current NGDC API:
+#                if "data" in data and len(data["data"]) > 0:
+#                    # We take the first result that has a symbol
+#                    for gene in data["data"]:
+#                        if "symbol" in gene and gene["symbol"]:
+#                            # Optional: Check overlap strictly? 
+#                           # For now, assume the region query implies overlap
+#                            results[ens_id] = gene["symbol"]
+#                            break
+#                            
+#            time.sleep(0.2)
+#        except Exception:
+#            pass
+#
 sys.stderr.write("\n")
 
 # Output
@@ -261,21 +267,25 @@ EOF
 echo -e "\n[4/4] Merging annotations..."
 
 if [ -s "$TEMP_API_MAP" ]; then
-    awk -F'\t' '
-    BEGIN { OFS="\t" }
+    awk '
+    BEGIN { OFS="," }
     FNR==NR { map[$1] = $2; next }
     {
-        if (FNR == 1) { print $0; next }
+        if (FNR == 1) { 
+            sub(/\r$/, "", $0)
+            print $0; next 
+        }
+        sub(/\r$/, "", $0)
         if ($NF == "NA") {
-            split($5, a, "."); id=a[1]
-            if (id in map) $NF = map[id]; else $NF = id
+            split($6, a, "."); id=a[1]
+            if (id in map) $NF = map[id]
         }
         print $0
     }
-    ' "$TEMP_API_MAP" "$TEMP_PRELIM" > "$FINAL_OUTPUT"
+    ' FS='\t' "$TEMP_API_MAP" FS=',' "$TEMP_PRELIM" > "$FINAL_OUTPUT"
 else
-    echo "   > No new names found. Reverting to IDs."
-    awk -F'\t' 'BEGIN{OFS="\t"} { if(FNR>1 && $NF=="NA") {split($5,a,"."); $NF=a[1]} print $0 }' "$TEMP_PRELIM" > "$FINAL_OUTPUT"
+    echo "   > No new names found. Keeping NAs."
+    awk -F',' 'BEGIN{OFS=","} { sub(/\r$/, "", $0); print $0 }' "$TEMP_PRELIM" > "$FINAL_OUTPUT"
 fi
 
 rm -f "$TEMP_PRELIM" "$TEMP_MISSING" "$TEMP_API_MAP"
