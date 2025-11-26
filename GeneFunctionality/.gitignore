@@ -1,0 +1,26 @@
+# Data directories
+data/
+*/data/
+
+# Results directories
+results/
+*/results/
+
+# Temporary files
+tmp/
+*/tmp/
+
+# Test directories
+tests/
+*/tests/
+
+# BLAT index files
+*.ooc
+
+# Temporary processing files
+*.tsv
+annotated_output*.tsv
+*_dummy_data.tsv
+updated_gRNA_file.csv
+missing_List_unique.txt
+*_keys*.txt

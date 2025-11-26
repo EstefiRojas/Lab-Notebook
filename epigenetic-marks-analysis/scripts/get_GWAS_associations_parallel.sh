@@ -546,7 +546,7 @@ fi
 echo "Starting parallel processing... A log will be available at: $log_file"
 tail -n +${start_from_line} "$REGIONS_FILE" | tr -d '\r' | tr -dc '[:print:]\n' | sed 's/"//g' | \
     nl -v "${start_from_line}" -w1 -s $'\t' | \
-    parallel --jobs 4 --joblog "$log_file" --eta "/bin/bash -c 'process_gwas_region_line \"\$1\" \"\$2\"' _ {} {%}" >> "$temp_output_file"
+    parallel --jobs 1 --joblog "$log_file" --eta "/bin/bash -c 'process_gwas_region_line \"\$1\" \"\$2\"' _ {} {%}" >> "$temp_output_file"
 
 # Sort the temporary file by line number, remove the line number, and append to the final output file
 if [ -f "$temp_output_file" ] && [ -s "$temp_output_file" ]; then
