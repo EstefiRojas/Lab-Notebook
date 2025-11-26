@@ -103,8 +103,9 @@ plt.close()
 
 # Pooled version
 plt.figure(figsize=(8, 6))
-sns.violinplot(data=melted_df, x='Essentiality', y='Probability_Functional', order=order, palette="OrRd")
+sns.violinplot(data=melted_df, x='Essentiality', y='Probability_Functional', order=order, palette="OrRd", cut=0)
 sns.stripplot(data=melted_df, x='Essentiality', y='Probability_Functional', order=order, color='black', alpha=0.3, size=3)
+plt.ylim(0, 1)
 plt.title("Functional Probability Distribution (Pooled Studies)")
 plt.ylabel("Probability Functional")
 plt.xlabel("Essentiality Classification")

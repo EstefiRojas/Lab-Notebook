@@ -8,7 +8,8 @@ library(ggsignif)
 essentials1_lncrna_data <- read.csv("../results/unified_genome_alignments.csv", header = TRUE)
 table(essentials1_lncrna_data$Study)
 
-ess_d <- essentials1_lncrna_data %>% filter(Protein_Off_Target == "NO" & !is.na(Probability_Functional) & Study == "Liang")
+ess_d <- essentials1_lncrna_data %>% filter(Protein_Off_Target == "NO" & !is.na(Probability_Functional) & Study %in% c("Liang","Montero"))
+table(ess_d$Study)
 table(ess_d$Essentiality)
 # Define the desired order for the categorical variable
 essentiality_values <- c("Non-essential", "Rare", "Common", "Core")
@@ -138,7 +139,7 @@ plot_modified <- ggplot(data = filtered_df,
   
   # 6. Update labels (No changes here)
   labs(
-    title = "Gene Essentiality",
+    title = "Gene Essentiality (Pooled)",
     y = "lncRNA Probability",
     fill = "Essentiality Group"
   ) +
