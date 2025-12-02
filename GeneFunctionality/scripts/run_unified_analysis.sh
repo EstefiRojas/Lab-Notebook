@@ -49,6 +49,7 @@ fi
 
 GENOME_PSL="$UNIFIED_DIR/unified_vs_genome.psl"
 #blat "$GENOME_FASTA" /dev/null /dev/null -tileSize=7 -makeOoc=7.ooc -repMatch=1024
+#blat -t=dna -q=dna "$GENOME_FASTA" "$UNIFIED_FASTA" -ooc=7.ooc -minScore=15 -minIdentity=100 -tileSize=7 -stepSize=5 "$GENOME_PSL".tmp
 blat -t=dna -q=dna "$GENOME_FASTA" "$UNIFIED_FASTA" -minScore=15 -minIdentity=100 "$GENOME_PSL".tmp
 
 # Keep only antisense blat matches
@@ -68,6 +69,7 @@ if [ ! -f "$PROTEIN_FASTA" ]; then
     touch "$PROTEIN_MATCHES"
 else
     #blat "$PROTEIN_FASTA" /dev/null /dev/null -tileSize=7 -makeOoc=7.ooc -repMatch=1024
+    #blat -t=dna -q=dna "$PROTEIN_FASTA" "$UNIFIED_FASTA" -ooc=7.ooc -minScore=15 -minIdentity=100 -tileSize=7 -stepSize=5 "$PROTEIN_PSL".tmp
     blat -t=dna -q=dna "$PROTEIN_FASTA" "$UNIFIED_FASTA" -minScore=15 -minIdentity=100 "$PROTEIN_PSL".tmp
     awk '$9 ~ /^-/' "$PROTEIN_PSL".tmp > "$PROTEIN_PSL"
     rm "$PROTEIN_PSL".tmp
@@ -245,5 +247,132 @@ FNR==1 {
 # Replace original with new version
 mv "$RESULTS_DIR/unified_genome_alignments_with_seq.csv" "$RESULTS_DIR/unified_genome_alignments.csv"
 rm "$RESULTS_DIR/grna_seq_map.csv" "$RESULTS_DIR/unified_genome_alignments_raw.csv"
+
+# Step 6: Filter antisense entries to protein coding genes
+echo "Filtering antisense entries to protein coding genes..."
+
+CDS_BED="$REF_DIR/cds_gene_names.bed"
+ANTISENSE_MAPPING="$REF_DIR/antisense_targets.txt"
+LNCRNA_BED="$REF_DIR/lncrna_genes.bed"
+GTF_ANNOTATION="$REF_DIR/gencode.v49.primary_assembly.annotation.gtf"
+
+# Create CDS BED with gene names if not exists
+if [ ! -f "$CDS_BED" ]; then
+    echo "Generating CDS BED file (with gene names) from GTF..."
+    if [ -f "$GTF_ANNOTATION" ]; then
+        # Extract CDS entries. 
+        # We want: chr, start, end, gene_name, score, strand
+        # GTF is 1-based, BED is 0-based. Start-1.
+        awk '$3=="CDS" {
+            gname = "NA"
+            for (i=9; i<=NF; i++) {
+                if ($i == "gene_name") {
+                    gname = $(i+1)
+                    gsub(/"|;/, "", gname)
+                    break
+                }
+            }
+            print $1, $4-1, $5, gname, 0, $7
+        }' OFS="\t" "$GTF_ANNOTATION" > "$CDS_BED"
+    else
+        echo "Error: GTF annotation not found at $GTF_ANNOTATION"
+        exit 1
+    fi
+fi
+
+# Identify antisense lncRNAs and their targets
+if [ ! -f "$ANTISENSE_MAPPING" ]; then
+    echo "Identifying lncRNAs antisense to protein coding genes..."
+    if [ -f "$LNCRNA_BED" ]; then
+        # Output: lncRNA_ID <tab> Protein_Name
+        # -wa -wb gives all cols from A and B.
+        # A is 6 cols. B is 6 cols.
+        # A col 4 is lncRNA ID. B col 4 is Protein Name (which is col 10 in combined output).
+        bedtools intersect -a "$LNCRNA_BED" -b "$CDS_BED" -S -wa -wb | cut -f 4,10 | sort -u > "$ANTISENSE_MAPPING"
+    else
+        echo "Error: lncRNA BED file not found at $LNCRNA_BED"
+        exit 1
+    fi
+fi
+
+# Filter the results CSV
+# Load antisense gene IDs into an array/map and filter
+awk -F',' -v mapping_file="$ANTISENSE_MAPPING" '
+BEGIN {
+    OFS=","
+    # Load antisense mapping
+    # Format: lncRNA_ID \t Protein_Name
+    while ((getline < mapping_file) > 0) {
+        split($0, parts, "\t")
+        lnc_id = parts[1]
+        prot_name = parts[2]
+        
+        if (lnc_id in antisense_map) {
+            # Append if not already present (simple check)
+            if (index(antisense_map[lnc_id], prot_name) == 0) {
+                antisense_map[lnc_id] = antisense_map[lnc_id] ";" prot_name
+            }
+        } else {
+            antisense_map[lnc_id] = prot_name
+        }
+    }
+    close(mapping_file)
+    
+    marked_count = 0
+    rare_count = 0
+    common_count = 0
+    core_count = 0
+    non_essential_count = 0
+}
+{
+    # Header
+    if (FNR==1) { print $0, "Antisense_to_CDS", "Antisense_Target_Name"; next }
+    
+    # Column 6 is ENSG_ID (Target Gene ID from genome mapping)
+    ensg_id = $6
+    essentiality = $5
+    
+    # Check if this gene is in the antisense list
+    if (ensg_id in antisense_map) {
+        marked_count++
+        marked_genes[ensg_id] = 1
+        
+        # Track by study
+        study = $1
+        study_counts[study]++
+        
+        if (essentiality == "Rare") rare_count++
+        else if (essentiality == "Common") common_count++
+        else if (essentiality == "Core") core_count++
+        else if (essentiality == "Non-essential") non_essential_count++
+        
+        print $0, "YES", antisense_map[ensg_id]
+    } else {
+        print $0, "NO", "NA"
+    }
+}
+END {
+    # Count unique genes
+    unique_marked_genes = 0
+    for (g in marked_genes) unique_marked_genes++
+
+    print "--------------------------------------------------" > "/dev/stderr"
+    print "Antisense Marking Statistics:" > "/dev/stderr"
+    print "Marked " marked_count " entries as Antisense corresponding to " unique_marked_genes " unique lncRNAs (ENSG_IDs)." > "/dev/stderr"
+    print "Breakdown of marked entries by Essentiality:" > "/dev/stderr"
+    print "  Rare: " rare_count > "/dev/stderr"
+    print "  Common: " common_count > "/dev/stderr"
+    print "  Core: " core_count > "/dev/stderr"
+    print "  Non-essential: " non_essential_count > "/dev/stderr"
+    
+    print "Breakdown of marked entries by Study:" > "/dev/stderr"
+    for (s in study_counts) {
+        print "  " s ": " study_counts[s] > "/dev/stderr"
+    }
+    print "--------------------------------------------------" > "/dev/stderr"
+}
+' "$RESULTS_DIR/unified_genome_alignments.csv" > "$RESULTS_DIR/unified_genome_alignments_filtered.csv"
+
+mv "$RESULTS_DIR/unified_genome_alignments_filtered.csv" "$RESULTS_DIR/unified_genome_alignments.csv"
 
 echo "Analysis complete. Results in $RESULTS_DIR/unified_genome_alignments.csv"

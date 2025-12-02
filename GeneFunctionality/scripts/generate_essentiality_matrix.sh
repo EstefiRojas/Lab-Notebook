@@ -30,29 +30,31 @@ NR > 1 {
     # Clean carriage returns
     gsub(/\r/, "", $0)
 
-    # Columns based on annotated_unified_genome_alignments.csv structure:
+    # Columns based on NEW annotated_unified_genome_alignments.csv structure:
     # 1: Study
     # 2: gRNA_ID
-    # 3: Target_Gene_ID
+    # 3: gRNA_Sequence
     # 4: gRNA_Type
-    # 5: Essentiality
+    # 5: Target_Gene_ID
     # 6: ENSG_ID
-    # 7: Strand
-    # 8: Probability_Functional
-    # 9: Protein_Off_Target
-    # 10: Gene_Name (Added by map_lncRNA_genes.sh)
-    # 11: gRNA_Sequence (Added by run_unified_analysis.sh)
+    # 7: Gene_Name
+    # 8: Strand
+    # 9: Essentiality
+    # 10: Probability_Functional
+    # 11: Protein_Off_Target
+    # 12: Antisense_to_CDS
+    # 13: Antisense_Target_Name
     
     study = $1
-    essentiality = $5
+    essentiality = $9
     ensg_id = $6
-    prob = $8
-    gene_name = $11
+    prob = $10
+    gene_name = $7
     
     # Filter:
-    # 1. Essentiality is Rare, Common, or Core
+    # 1. Essentiality is Rare, Common, Core, or Non-essential
     # 2. Probability_Functional is NOT NA
-    if (prob != "NA" && (essentiality == "Rare" || essentiality == "Common" || essentiality == "Core")) {
+    if (prob != "NA" && (essentiality == "Rare" || essentiality == "Common" || essentiality == "Core" || essentiality == "Non-essential")) {
         
         # Store data
         # If multiple gRNAs map to the same gene in the same study with different essentialities,
@@ -63,15 +65,24 @@ NR > 1 {
         # Check if we already have a value for this gene/study
         if ((ensg_id, study) in matrix) {
             current_val = matrix[ensg_id, study]
-            # Priority logic (optional): Core > Common > Rare
-            # If current is Rare and new is Common, update.
-            # If current is Common and new is Core, update.
-            if (essentiality == "Core") {
-                matrix[ensg_id, study] = essentiality
-            } else if (essentiality == "Common" && current_val == "Rare") {
+            # Priority logic: Core > Common > Rare > Non-essential
+            
+            # Helper function logic (simulated):
+            # 3 = Core, 2 = Common, 1 = Rare, 0 = Non-essential
+            
+            new_score = 0
+            if (essentiality == "Rare") new_score = 1
+            if (essentiality == "Common") new_score = 2
+            if (essentiality == "Core") new_score = 3
+            
+            curr_score = 0
+            if (current_val == "Rare") curr_score = 1
+            if (current_val == "Common") curr_score = 2
+            if (current_val == "Core") curr_score = 3
+            
+            if (new_score > curr_score) {
                 matrix[ensg_id, study] = essentiality
             }
-            # Else keep current
         } else {
             matrix[ensg_id, study] = essentiality
         }

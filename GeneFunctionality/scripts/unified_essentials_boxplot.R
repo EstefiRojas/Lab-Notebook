@@ -3,12 +3,16 @@ library(dplyr)
 library(stringr) # For str_detect
 library(ggplot2)
 library(ggsignif)
+library(ggbeeswarm)
 
 # Load csv file
-essentials1_lncrna_data <- read.csv("../results/unified_genome_alignments.csv", header = TRUE)
+essentials1_lncrna_data <- read.csv("../results/annotated_unified_genome_alignments.csv", header = TRUE)
 table(essentials1_lncrna_data$Study)
 
-ess_d <- essentials1_lncrna_data %>% filter(Protein_Off_Target == "NO" & !is.na(Probability_Functional) & Study %in% c("Liang","Montero"))
+ess_d <- essentials1_lncrna_data %>% filter(Protein_Off_Target == "NO" & 
+                                              !is.na(Probability_Functional) & 
+                                              Study %in% c("Liang","Montero") & 
+                                              Antisense_to_CDS == "NO")
 table(ess_d$Study)
 table(ess_d$Essentiality)
 # Define the desired order for the categorical variable
@@ -119,12 +123,14 @@ plot_modified <- ggplot(data = filtered_df,
   geom_boxplot(data = ~ subset(., Essentiality != "Core"), linewidth = 0.9,
                na.rm = TRUE, outlier.shape = NA, color = "black", staplewidth = 0.5) +
   
-  # 2. Add a jitter plot for the 'Shared' group
-  geom_jitter(data = ~ subset(., Essentiality == "Core"),
-             size = 6, 
-             shape = 21, 
-             color = "black",
-             stroke = 1) +
+  # 2. Add points (for Core)
+  geom_beeswarm(data = ~ subset(., Essentiality == "Core"),
+                size = 4,
+                cex = 3,
+                shape = 21, 
+                color = "black",
+                priority = "ascending",
+                stroke = 1) +
   
   # 3. Manually set fill colors
   scale_fill_brewer(palette = "Set2") +

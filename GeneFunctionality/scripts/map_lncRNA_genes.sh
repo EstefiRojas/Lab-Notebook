@@ -282,10 +282,49 @@ if [ -s "$TEMP_API_MAP" ]; then
         }
         print $0
     }
-    ' FS='\t' "$TEMP_API_MAP" FS=',' "$TEMP_PRELIM" > "$FINAL_OUTPUT"
+    ' FS='\t' "$TEMP_API_MAP" FS=',' "$TEMP_PRELIM" > "$FINAL_OUTPUT".tmp
+    
+    # Reorder columns
+    # Current (Input to this step): 
+    # 1:Study, 2:gRNA_ID, 3:Target_Gene_ID, 4:gRNA_Type, 5:Essentiality, 
+    # 6:ENSG_ID, 7:Strand, 8:Probability_Functional, 9:Protein_Off_Target, 
+    # 10:gRNA_Sequence, 11:Antisense_to_CDS, 12:Antisense_Target_Name, 13:Gene_Name
+    
+    # Desired Order:
+    # 1:Study
+    # 2:gRNA_ID
+    # 10:gRNA_Sequence
+    # 4:gRNA_Type
+    # 3:Target_Gene_ID (Original Target)
+    # 6:ENSG_ID (Mapped Target)
+    # 13:Gene_Name (Mapped Name)
+    # 7:Strand
+    # 5:Essentiality
+    # 8:Probability_Functional
+    # 9:Protein_Off_Target
+    # 11:Antisense_to_CDS
+    # 12:Antisense_Target_Name
+    
+    awk -F',' 'BEGIN{OFS=","} {
+        # Handle header
+        if (NR==1) {
+            print "Study", "gRNA_ID", "gRNA_Sequence", "gRNA_Type", "Target_Gene_ID", "ENSG_ID", "Gene_Name", "Strand", "Essentiality", "Probability_Functional", "Protein_Off_Target", "Antisense_to_CDS", "Antisense_Target_Name"
+        } else {
+            print $1, $2, $10, $4, $3, $6, $13, $7, $5, $8, $9, $11, $12
+        }
+    }' "$FINAL_OUTPUT".tmp > "$FINAL_OUTPUT"
+    rm "$FINAL_OUTPUT".tmp
 else
     echo "   > No new names found. Keeping NAs."
-    awk -F',' 'BEGIN{OFS=","} { sub(/\r$/, "", $0); print $0 }' "$TEMP_PRELIM" > "$FINAL_OUTPUT"
+    awk -F',' 'BEGIN{OFS=","} { 
+        sub(/\r$/, "", $0)
+        # Reorder even if no new names (Gene_Name is still added as NA/Gene_Name in previous step)
+        if (NR==1) {
+             print "Study", "gRNA_ID", "gRNA_Sequence", "gRNA_Type", "Target_Gene_ID", "ENSG_ID", "Gene_Name", "Strand", "Essentiality", "Probability_Functional", "Protein_Off_Target", "Antisense_to_CDS", "Antisense_Target_Name"
+        } else {
+             print $1, $2, $10, $4, $3, $6, $13, $7, $5, $8, $9, $11, $12
+        }
+    }' "$TEMP_PRELIM" > "$FINAL_OUTPUT"
 fi
 
 rm -f "$TEMP_PRELIM" "$TEMP_MISSING" "$TEMP_API_MAP"

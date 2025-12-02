@@ -3,11 +3,15 @@ library(dplyr)
 library(stringr) 
 library(ggplot2)
 library(ggsignif)
+#install.packages("ggforce")
+library(ggforce)
+#install.packages("ggbeeswarm")
+library(ggbeeswarm)
 
 # Load csv file
-essentials1_lncrna_data <- read.csv("../results/unified_genome_alignments.csv", header = TRUE)
+essentials1_lncrna_data <- read.csv("../results/annotated_unified_genome_alignments.csv", header = TRUE)
 
-ess_d <- essentials1_lncrna_data %>% filter(Protein_Off_Target == "NO" & !is.na(Probability_Functional))
+ess_d <- essentials1_lncrna_data %>% filter(Protein_Off_Target == "NO" & !is.na(Probability_Functional) & Antisense_to_CDS == "NO")
 
 # Define the desired order for the categorical variable
 essentiality_values <- c("Non-essential", "Rare", "Common", "Core")
@@ -100,7 +104,7 @@ all_stats_labels <- filtered_df %>%
 
 
 # --- Generate the Faceted Plot ---
-
+help("geom_beeswarm")
 plot_modified <- ggplot(data = filtered_df,
                         # Use the Unique 'Label_Key' for x-axis to maintain sort order
                         aes(x = Label_Key, y = Probability_Functional, 
@@ -111,10 +115,12 @@ plot_modified <- ggplot(data = filtered_df,
                na.rm = TRUE, outlier.shape = NA, color = "black", staplewidth = 0.5) +
   
   # 2. Add points (for Core)
-  geom_jitter(data = ~ subset(., Essentiality == "Core"),
+  geom_beeswarm(data = ~ subset(., Essentiality == "Core"),
               size = 4,
+              cex = 3,
               shape = 21, 
               color = "black",
+              priority = "ascending",
               stroke = 1) +
   
   # 3. Colors
@@ -169,3 +175,4 @@ plot_final <- plot_modified +
 
 # Display the final plot
 print(plot_final)
+
