@@ -1300,7 +1300,7 @@ pca_sncrna_plot <- ggplot(sncrna_pc_scores, aes(x = Comp.1, y = Comp.2, shape = 
   xlim(-5, 10) +
   ylim(-5, 5)
 pca_sncrna_plot
-ggsave(paste0("results/pca/pca_sncrna_20_features_loadings","_pc2.png"), pca_sncrna_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
+ggsave(paste0("results/pca/9-Dec-2025/pca_sncrna_20_features_loadings","_pc2.png"), pca_sncrna_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
 
 # Plot PCA
 pca_sncrna_plot <- ggplot(sncrna_pc_scores, aes(x = Comp.1, y = Comp.3, shape = `Gene type`, color = `Gene type`)) +
@@ -1332,7 +1332,7 @@ pca_sncrna_plot <- ggplot(sncrna_pc_scores, aes(x = Comp.1, y = Comp.3, shape = 
   xlim(-5, 10) +
   ylim(-5, 5)
 pca_sncrna_plot
-ggsave(paste0("results/pca/pca_sncrna_20_features_loadings","_pc3.png"), pca_sncrna_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
+ggsave(paste0("results/pca/9-Dec-2025/pca_sncrna_20_features_loadings","_pc3.png"), pca_sncrna_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
 
 # Plot PCA
 pca_sncrna_plot <- ggplot(sncrna_pc_scores, aes(x = Comp.1, y = Comp.4, shape = `Gene type`, color = `Gene type`)) +
@@ -1364,7 +1364,7 @@ pca_sncrna_plot <- ggplot(sncrna_pc_scores, aes(x = Comp.1, y = Comp.4, shape = 
   xlim(-5, 10) +
   ylim(-5, 5)
 pca_sncrna_plot
-ggsave(paste0("results/pca/pca_sncrna_20_features_loadings","_pc4.png"), pca_sncrna_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
+ggsave(paste0("results/pca/9-Dec-2025/pca_sncrna_20_features_loadings","_pc4.png"), pca_sncrna_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
 
 # Plot PCA
 pca_sncrna_plot <- ggplot(sncrna_pc_scores, aes(x = Comp.1, y = Comp.5, shape = `Gene type`, color = `Gene type`)) +
@@ -1396,7 +1396,7 @@ pca_sncrna_plot <- ggplot(sncrna_pc_scores, aes(x = Comp.1, y = Comp.5, shape = 
   xlim(-5, 10) +
   ylim(-5, 5)
 pca_sncrna_plot
-ggsave(paste0("results/pca/pca_sncrna_20_features_loadings","_pc5.png"), pca_sncrna_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
+ggsave(paste0("results/pca/9-Dec-2025/pca_sncrna_20_features_loadings","_pc5.png"), pca_sncrna_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
 
 # Plot PCA
 pca_sncrna_plot <- ggplot(sncrna_pc_scores, aes(x = Comp.1, y = Comp.6, shape = `Gene type`, color = `Gene type`)) +
@@ -1428,7 +1428,7 @@ pca_sncrna_plot <- ggplot(sncrna_pc_scores, aes(x = Comp.1, y = Comp.6, shape = 
   xlim(-5, 10) +
   ylim(-5, 5)
 pca_sncrna_plot
-ggsave(paste0("results/pca/pca_sncrna_20_features_loadings","_pc6.png"), pca_sncrna_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
+ggsave(paste0("results/pca/9-Dec-2025/pca_sncrna_20_features_loadings","_pc6.png"), pca_sncrna_plot, scale = 3, width = 3840, height = 2160, units = "px", bg = "white", dpi = 600)
 
 # Change colnames
 #colnames(sncrna_data_normalized) <- c(PCA_20_SELECT_FEATURES_LABELS, "Dataset")
