@@ -191,7 +191,7 @@ original_alpha <- 0.05
 # Corrected alpha
 corrected_alpha <- original_alpha / number_of_tests
 
-# Adjust p-values using Bonferroni
+# Adjust p-values using Benjamini-H
 prot_p_values_adjusted <- p.adjust(prot_pvalues, method="BH")
 
 prot_p_values_adjusted <- matrix(prot_p_values_adjusted, nrow = n, byrow = TRUE)

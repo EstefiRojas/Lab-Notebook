@@ -306,8 +306,8 @@ create_violin_plot(df_long_repeat_assoc_coding_ordered, c(0,1000), "association_
 create_violin_plot(df_long_repeat_assoc_coding_ordered, c(0,1000), "association_review2", violin_adjust = 1/2)
 
 
-help("geom_violin")
-# Structure.
+##############
+# Structure. #
 df_long_struct_paper <- df_long_all[df_long_all$feature=="Covariance" 
                                     | df_long_all$feature=="MFE" 
                                     | df_long_all$feature=="Interactions"
@@ -317,11 +317,13 @@ custom_order <- c("Fickett","RNAcode","Interactions","Covariance","MFE")
 df_long_struct_paper$feature <- factor(df_long_struct_paper$feature, levels = custom_order)
 df_long_struct_pape_ordered <- df_long_struct_paper %>%
   arrange(feature)
-create_violin_plot(df_long_struct_pape_ordered, c(NA,NA), "structure_review")
+create_violin_plot(df_long_struct_pape_ordered, c(-2.5,5), "structure_review")
 create_violin_plot(df_long_struct_pape_ordered, c(-3,17), "structure_review2")
 create_violin_plot(df_long_struct_pape_ordered, c(-7,2), "structure_review3")
+create_violin_plot(df_long_struct_pape_ordered, c(NA,NA), "structure_review4") # Note: the bounds parameter needs to be removed from the ggplot function in order for these ylimits to work properly.
 
-# Population Variation.
+#########################
+# Population Variation. #
 df_long_pop_var <- df_long_all[df_long_all$feature=="MAF"
                                | df_long_all$feature=="SNPs", ]
 create_violin_plot(df_long_pop_var, c(-2,10), "popvar_review")

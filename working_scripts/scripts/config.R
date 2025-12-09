@@ -32,17 +32,17 @@ PCA_DIR <- file.path(RESULTS_DIR, "pca")
 
 # Specific file paths
 # Data files
-FUNC_PROT_EXON2_FEATURES_FILE <- file.path(FEATURES_DIR, "functional-protein-exon2-dataset-features.csv")
-FUNC_PROT_EXON3_FEATURES_FILE <- file.path(FEATURES_DIR, "functional-protein-exon3-dataset-features.csv")
-FUNC_LNCRNA_EXON1_FEATURES_FILE <- file.path(FEATURES_DIR, "functional-lncrna-exon1-dataset-features.csv")
-FUNC_LNCRNA_EXON2_FEATURES_FILE <- file.path(FEATURES_DIR, "functional-lncrna-exon2-dataset-features.csv")
-FUNC_SNCRNA_FEATURES_FILE <- file.path(FEATURES_DIR, "functional-short-ncrna-dataset-features.csv")
+FUNC_PROT_EXON2_FEATURES_FILE <- file.path(FEATURES_DIR, "functional-protein-exon2-dataset-features-30-11-2025.csv")
+FUNC_PROT_EXON3_FEATURES_FILE <- file.path(FEATURES_DIR, "functional-protein-exon3-dataset-features-30-11-2025.csv")
+FUNC_LNCRNA_EXON1_FEATURES_FILE <- file.path(FEATURES_DIR, "functional-lncrna-exon1-dataset-features-30-11-2025.csv")
+FUNC_LNCRNA_EXON2_FEATURES_FILE <- file.path(FEATURES_DIR, "functional-lncrna-exon2-dataset-features-30-11-2025.csv")
+FUNC_SNCRNA_FEATURES_FILE <- file.path(FEATURES_DIR, "functional-short-ncrna-dataset-features-30-11-2025.csv")
 
-NC_PROT_EXON2_FEATURES_FILE <- file.path(FEATURES_DIR, "protein-exon2-negative-control-dataset-features.csv")
-NC_PROT_EXON3_FEATURES_FILE <- file.path(FEATURES_DIR, "protein-exon3-negative-control-dataset-features.csv")
-NC_LNCRNA_EXON1_FEATURES_FILE <- file.path(FEATURES_DIR, "lncrna-exon1-negative-control-dataset-features.csv")
-NC_LNCRNA_EXON2_FEATURES_FILE <- file.path(FEATURES_DIR, "lncrna-exon2-negative-control-dataset-features.csv")
-NC_SNCRNA_FEATURES_FILE <- file.path(FEATURES_DIR, "short-ncrna-negative-control-dataset-features.csv")
+NC_PROT_EXON2_FEATURES_FILE <- file.path(FEATURES_DIR, "protein-exon2-negative-control-dataset-features-30-11-2025.csv")
+NC_PROT_EXON3_FEATURES_FILE <- file.path(FEATURES_DIR, "protein-exon3-negative-control-dataset-features-30-11-2025.csv")
+NC_LNCRNA_EXON1_FEATURES_FILE <- file.path(FEATURES_DIR, "lncrna-exon1-negative-control-dataset-features-30-11-2025.csv")
+NC_LNCRNA_EXON2_FEATURES_FILE <- file.path(FEATURES_DIR, "lncrna-exon2-negative-control-dataset-features-30-11-2025.csv")
+NC_SNCRNA_FEATURES_FILE <- file.path(FEATURES_DIR, "short-ncrna-negative-control-dataset-features-30-11-2025.csv")
 
 # Dinucleotide feature files
 PROT_EXON2_DIN_FEATURES_FILE <- file.path(DINUCLEOTIDE_FEATURES_DIR, "protein-exon2-dinucleotide-features.csv")

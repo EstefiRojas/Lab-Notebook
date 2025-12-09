@@ -62,3 +62,14 @@ python3 plot_essentiality_analysis.py
 *   `parallel_categories.png`
 *   `top_20_ranking.png`
 *   `jaccard_similarity.png`
+*   `upset_binary_matrix.csv`
+
+## Step 6: Generate UpSet Plot (R)
+
+Generate the refined UpSet plot using the R script, which uses the binary matrix created in the previous step.
+
+```bash
+Rscript plot_upset.R
+```
+
+**Output:** `results/plots2/upset_plot_R.png`

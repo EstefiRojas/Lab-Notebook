@@ -65,7 +65,7 @@ vaultrna_dataset <- funcSncrnaDataset %>%
 summary(vaultrna_dataset$gnomAD_SNP_density)
 
 # SNP density greater that 1 (more SNPs than nucleotides in the sequence)
-hyper_snp_counts <- funcSncrnaDataset %>%
+hyper_snp_counts <- funcSncrnaDataset %>% 
   select(Chromosome,Start,End,hgnc_id,GeneName,SNP_density,rna_type) %>%
   filter(SNP_density > 1)
 write.csv(hyper_snp_counts, "../data/hyper_SNP_count_sncRNA_dataset.csv", row.names = FALSE)

@@ -98,8 +98,8 @@ get_robust_zscores <- function(data, output_dir) {
   #protein_positive_feature_matrix <- protein_positive_feature_matrix %>% sample_n(min(2 * subset_value, nrow(protein_positive_feature_matrix)))  # Subset rows from positive data
   #protein_negative_feature_matrix <- protein_negative_feature_matrix %>% sample_n(min(2 * 10 * subset_value, nrow(protein_negative_feature_matrix)))  # Subset rows from negative data
   
-  #print(summary(protein_positive_feature_matrix %>% select(H3K9ac_MaxScaledSignal,H3K36me3_MaxScaledSignal,H3K79me2_MaxScaledSignal,chrm_acc_MaxScaledSignal)))
-  #print(summary(protein_negative_feature_matrix %>% select(H3K9ac_MaxScaledSignal,H3K36me3_MaxScaledSignal,H3K79me2_MaxScaledSignal,chrm_acc_MaxScaledSignal)))  
+  #print(summary(protein_positive_feature_matrix %>% select(coding_potential, Max_covariance)))
+  #print(summary(protein_negative_feature_matrix %>% select(coding_potential, Max_covariance)))  
   #print(apply(protein_positive_feature_matrix, 2, sd, na.rm = TRUE))
   #apply(protein_negative_feature_matrix, 2, sd, na.rm = TRUE)
   #print(sd(protein_negative_feature_matrix$RPKM_tissue, na.rm = TRUE))
@@ -111,9 +111,9 @@ get_robust_zscores <- function(data, output_dir) {
                                                                 protein_negative_feature_matrix %>% dplyr::select(-Dataset), 
                                                                 verbose)
   
-  #print(summary(protein_functional_z_scores %>% select(H3K9ac_MaxScaledSignal,H3K79me2_MaxScaledSignal,chrm_acc_MaxScaledSignal)))
+  print(summary(protein_functional_z_scores %>% select(coding_potential, Max_covariance)))
   #print(count(protein_positive_feature_matrix))
-  #print(summary(protein_negative_z_scores %>% select(H3K9ac_MaxScaledSignal,H3K79me2_MaxScaledSignal,chrm_acc_MaxScaledSignal)))
+  print(summary(protein_negative_z_scores %>% select(coding_potential, Max_covariance)))
   #print(summary(protein_negative_feature_matrix))
   #print(sd(protein_functional_z_scores$RPKM_tissue, na.rm = TRUE))
   #print(sd(protein_negative_z_scores$RPKM_tissue, na.rm = TRUE))
@@ -178,8 +178,8 @@ get_robust_zscores <- function(data, output_dir) {
   #print(summary(lncrna_negative_feature_matrix %>% select(H3K9ac_MaxScaledSignal,H3K36me3_MaxScaledSignal,H3K79me2_MaxScaledSignal,chrm_acc_MaxScaledSignal)))
   #count(lncrna_negative_feature_matrix)
   
-  #print(summary(lncrna_functional_z_scores %>% select(H3K9ac_MaxScaledSignal,H3K36me3_MaxScaledSignal,H3K79me2_MaxScaledSignal,chrm_acc_MaxScaledSignal)))
-  #print(summary(lncrna_negative_z_scores %>% select(H3K9ac_MaxScaledSignal,H3K36me3_MaxScaledSignal,H3K79me2_MaxScaledSignal,chrm_acc_MaxScaledSignal)))
+  print(summary(lncrna_functional_z_scores %>% select(coding_potential, Max_covariance)))
+  print(summary(lncrna_negative_z_scores %>% select(coding_potential, Max_covariance)))
   
   #Restore Dataset
   lncrna_functional_z_scores$Dataset <- lncrna_positive_feature_matrix$Dataset
@@ -239,8 +239,8 @@ get_robust_zscores <- function(data, output_dir) {
   #print(summary(sncrna_negative_feature_matrix %>% select(H3K9ac_MaxScaledSignal,H3K36me3_MaxScaledSignal,H3K79me2_MaxScaledSignal,chrm_acc_MaxScaledSignal)))
   #count(sncrna_negative_feature_matrix)
   
-  #print(summary(sncrna_functional_z_scores %>% select(H3K9ac_MaxScaledSignal,H3K36me3_MaxScaledSignal,H3K79me2_MaxScaledSignal,chrm_acc_MaxScaledSignal)))
-  #print(summary(sncrna_negative_z_scores %>% select(H3K9ac_MaxScaledSignal,H3K36me3_MaxScaledSignal,H3K79me2_MaxScaledSignal,chrm_acc_MaxScaledSignal)))
+  print(summary(sncrna_functional_z_scores %>% select(coding_potential, Max_covariance)))
+  print(summary(sncrna_negative_z_scores %>% select(coding_potential, Max_covariance)))
   
   
   #Restore Dataset

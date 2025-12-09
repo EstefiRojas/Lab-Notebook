@@ -860,7 +860,7 @@ plot_modified <- ggplot(filterd_pip_data, aes(x = cred_set_category, y = highest
   scale_x_discrete(labels = new_labels) +
   # Update the labels for the new plot layout
   labs(
-    title = "GWAS: Causal SNPs Open Targets",
+    title = "Causal SNP-GWAS Credible Set density (kb)",
     #x = "Number of Credible sets per kb",
     y = "lncRNA Probability",
     caption = "*p-val<5-e8"

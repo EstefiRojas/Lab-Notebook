@@ -10,8 +10,8 @@ import sys
 sys.setrecursionlimit(10000)
 
 # Define paths
-INPUT_FILE = "../results/annotated_unified_genome_alignments.csv"
-OUTPUT_DIR = "../results/plots2"
+INPUT_FILE = "/Volumes/ADATA HD710 PRO/Downloads/Estefi/Otago University/Lab-Notebook/GeneFunctionality/results/annotated_unified_genome_alignments.csv"
+OUTPUT_DIR = "/Volumes/ADATA HD710 PRO/Downloads/Estefi/Otago University/Lab-Notebook/GeneFunctionality/results/plots2"
 
 # Create output directory
 if not os.path.exists(OUTPUT_DIR):
@@ -208,22 +208,76 @@ try:
     from upsetplot import UpSet
     print("Generating UpSet Plot...")
     
-    # Prepare data: Convert to boolean (True if Essential, False if None)
-    upset_data = df[study_cols].applymap(lambda x: x != '-')
+    # ---------------------------------------------------------
+    # Custom Binary Matrix Generation for UpSet Plot
+    # ---------------------------------------------------------
+    # 1. Use ENSG_ID without version.
+    # 2. Columns: Study_Essentiality (e.g., Huang_Non-essential).
+    # 3. Binary (1/0).
     
-    # Create MultiIndex Series
-    # We need to group by all columns to get counts for each combination
-    upset_series = upset_data.groupby(list(upset_data.columns)).size()
+    # Work with a copy of filtered_df to avoid modifying the original for other plots
+    upset_df = filtered_df.copy()
     
-    plt.figure(figsize=(10, 6))
+    # 1. Strip version from ENSG_ID
+    upset_df['Clean_ENSG_ID'] = upset_df['ENSG_ID'].apply(lambda x: x.split('.')[0])
+    
+    # 2. Create Column Name: Study_Essentiality
+    upset_df['Matrix_Col'] = upset_df['Study'] + '_' + upset_df['Essentiality']
+    
+    # 3. Create Binary Matrix using crosstab
+    # This automatically handles the 1/0 logic and aggregation
+    binary_matrix = pd.crosstab(upset_df['Clean_ENSG_ID'], upset_df['Matrix_Col'])
+    
+    # Ensure binary (just in case of duplicates, though crosstab counts them)
+    binary_matrix = (binary_matrix > 0).astype(int)
+    
+    # Filter columns to exclude Core-Liu and Core-Huang if they exist (as requested previously)
+    #cols_to_drop = []
+    #if 'Liu_Core' in binary_matrix.columns:
+    #    cols_to_drop.append('Liu_Core')
+    #if 'Huang_Core' in binary_matrix.columns:
+    #    cols_to_drop.append('Huang_Core')
+    #    
+    #if cols_to_drop:
+    #    binary_matrix = binary_matrix.drop(columns=cols_to_drop)
+        
+    print(f"Binary Matrix created with shape: {binary_matrix.shape}")
+    
+    # Save Matrix for R script
+    matrix_output_path = f"{OUTPUT_DIR}/upset_binary_matrix.csv"
+    binary_matrix.to_csv(matrix_output_path)
+    print(f"Binary matrix saved to {matrix_output_path}")
+    
+    # Convert to boolean for UpSet (it expects boolean or 0/1)
+    upset_binary_bool = binary_matrix.astype(bool)
+    
+    # Create MultiIndex Series for UpSet
+    upset_series = upset_binary_bool.groupby(list(upset_binary_bool.columns)).size()
+    
+    plt.figure(figsize=(14, 8))
     # Suppress FutureWarnings from upsetplot library
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', category=FutureWarning, module='upsetplot')
+        # Show counts and sort by cardinality (size of intersection)
         upset = UpSet(upset_series, subset_size='count', show_counts=True, sort_by='cardinality')
-        upset.plot()
+        
+        # Plot and capture the axes dictionary
+        plot_dict = upset.plot()
+        
+        # Explicitly enforce linear scale (though it is default) to be sure
+        # The 'intersections' axis controls the vertical bars
+        if 'intersections' in plot_dict:
+            plot_dict['intersections'].set_yscale('linear')
+            plot_dict['intersections'].set_title("Intersection Counts (Linear Scale)")
+            
     plt.savefig(f"{OUTPUT_DIR}/upset_plot.png", dpi=300)
     plt.close()
     print("UpSet plot saved.")
+    
+    # Print top intersections to console for user verification
+    print("\n--- UpSet Plot Data Verification (Top 20 Intersections) ---")
+    print(upset_series.sort_values(ascending=False).head(20))
+    print("-----------------------------------------------------------")
 
 except ImportError:
     print("upsetplot library not found. Skipping UpSet plot.")
@@ -246,11 +300,77 @@ consensus_counts = essential_genes.groupby('ENSG_ID')['Study'].nunique().to_fram
 long_df_consensus = long_df.merge(consensus_counts, on='ENSG_ID', how='left')
 long_df_consensus['Consensus_Count'] = long_df_consensus['Consensus_Count'].fillna(0).astype(int)
 
-plt.figure(figsize=(8, 6))
-sns.boxplot(data=long_df_consensus, x='Consensus_Count', y='Probability_Functional', hue='Consensus_Count', palette="viridis")
-plt.title("Functional Probability by Consensus Level\n(Plotting all transcript entries)")
-plt.xlabel("Number of Studies Identifying Gene as Essential")
-plt.ylabel("Probability Functional")
+# Create labels with counts
+# We count UNIQUE genes per consensus level, not total rows (transcripts)
+counts_per_level = long_df_consensus.groupby('Consensus_Count')['ENSG_ID'].nunique()
+# label mapping
+long_df_consensus['Consensus_Label'] = long_df_consensus['Consensus_Count'].apply(lambda x: f"{x}\n(n={counts_per_level.get(x, 0)})")
+
+# Sort labels by consensus count for plotting order
+sorted_labels = sorted(long_df_consensus['Consensus_Label'].unique(), key=lambda x: int(x.split('\n')[0]))
+
+# Style settings to match reference
+sns.set_style("ticks")
+plt.figure(figsize=(10, 8)) # Slightly larger to accommodate larger text
+
+# Explicitly generate palette to match the number of categories
+# User requested Purple, Teal, Yellow explicitly
+custom_palette = ['#440154', '#21908d', '#fde725']
+# Extend if more than 3 groups are present (just in case)
+if len(sorted_labels) > 3:
+    custom_palette = sns.color_palette("viridis", n_colors=len(sorted_labels))
+
+# Boxplot with specific width and palette
+ax = sns.boxplot(
+    data=long_df_consensus, 
+    x='Consensus_Label', 
+    y='Probability_Functional', 
+    hue='Consensus_Label', 
+    order=sorted_labels, 
+    palette=custom_palette, 
+    width=0.7,
+    dodge=False, # Prevent hue nesting spacing if hue is same as x
+    linewidth=1.5 # Thicker lines
+)
+
+# --- KS Stats Calculation and Annotation ---
+from scipy.stats import ks_2samp
+
+# Identify the '0' group label (assuming it starts with '0')
+ref_label = next((label for label in sorted_labels if label.startswith('0')), None)
+
+if ref_label:
+    ref_data = long_df_consensus[long_df_consensus['Consensus_Label'] == ref_label]['Probability_Functional'].dropna()
+    
+    # Iterate through other groups to compare against ref
+    for i, label in enumerate(sorted_labels):
+        if label == ref_label:
+            continue
+            
+        comp_data = long_df_consensus[long_df_consensus['Consensus_Label'] == label]['Probability_Functional'].dropna()
+        
+        if len(comp_data) > 0 and len(ref_data) > 0:
+            stat, p_value = ks_2samp(ref_data, comp_data)
+            
+            # Format as requested: KS = value
+            annotation_text = f"KS = {stat:.2f}"
+            
+            # Position above the box
+            # y_pos = 1.05 (slightly above max probability of 1.0)
+            plt.text(i, 1.02, annotation_text, ha='center', va='bottom', fontsize=18, fontweight='bold', color='black')
+
+# Enhance Font Sizes
+plt.title("Functional Probability by Consensus Level", fontsize=28, pad=20)
+plt.xlabel("Number of Studies Identifying Gene as Essential", fontsize=24, labelpad=15)
+plt.ylabel("lncRNA Probability", fontsize=24, labelpad=15)
+plt.xticks(fontsize=20)
+plt.yticks(fontsize=20)
+
+# Adjust y-limit to make room for annotations
+plt.ylim(0, 1.15)
+
+plt.legend([],[], frameon=False) # remove legend
+plt.tight_layout()
 plt.savefig(f"{OUTPUT_DIR}/consensus_vs_probability.png", dpi=300)
 plt.close()
 
