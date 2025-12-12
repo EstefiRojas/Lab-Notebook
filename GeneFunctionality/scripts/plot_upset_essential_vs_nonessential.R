@@ -57,13 +57,34 @@ for (study in target_studies) {
     }
 }
 
+# Define Desired Order for Sets
+ordered_sets <- c()
+
+# 1. Add all Essential sets first
+for (study in target_studies) {
+    set_e <- paste(study, "- Essential")
+    if (set_e %in% colnames(plot_data)) ordered_sets <- c(ordered_sets, set_e)
+}
+
+# 2. Add all Non-essential sets second
+for (study in target_studies) {
+    set_ne <- paste(study, "- Non-essential")
+    if (set_ne %in% colnames(plot_data)) ordered_sets <- c(ordered_sets, set_ne)
+}
+
+# Inverse Order as requested
+ordered_sets <- rev(ordered_sets)
+
+print("Set Order:")
+print(ordered_sets)
+
 # Generate UpSet Plot
 print("Generating UpSet plot...")
 png(filename = output_file, width = 1600, height = 900, res = 150)
 
 upset(plot_data,
-    nsets = ncol(plot_data),
-    nintersects = NA,
+    sets = ordered_sets,
+    keep.order = TRUE,
     order.by = "freq",
     show.numbers = "yes",
     mainbar.y.label = "Intersection Size",
@@ -76,53 +97,3 @@ upset(plot_data,
 
 dev.off()
 print(paste("Plot saved to:", output_file))
-
-# Generate Pairwise Plots
-print("Generating Pairwise UpSet plots...")
-
-pairs <- combn(target_studies, 2, simplify = FALSE)
-
-for (pair in pairs) {
-    study1 <- pair[1]
-    study2 <- pair[2]
-
-    print(paste("Processing pair:", study1, "vs", study2))
-
-    # Select columns for this pair
-    cols_to_plot <- c(
-        paste(study1, "- Essential"),
-        paste(study1, "- Non-essential"),
-        paste(study2, "- Essential"),
-        paste(study2, "- Non-essential")
-    )
-
-    # Check if columns exist
-    missing_cols <- setdiff(cols_to_plot, colnames(plot_data))
-    if (length(missing_cols) > 0) {
-        warning(paste("Missing columns for pair", study1, "vs", study2, ":", paste(missing_cols, collapse = ", ")))
-        next
-    }
-
-    pair_data <- plot_data[, cols_to_plot]
-
-    # Output filename
-    pair_output_file <- paste0(dirname(output_file), "/upset_pairwise_", study1, "_vs_", study2, ".png")
-
-    png(filename = pair_output_file, width = 1200, height = 900, res = 150)
-
-    upset(pair_data,
-        nsets = 4,
-        nintersects = NA,
-        order.by = "freq",
-        show.numbers = "yes",
-        mainbar.y.label = "Intersection Size",
-        sets.x.label = "Set Size",
-        text.scale = c(1.5, 1.3, 1.5, 1.3, 1.3, 1),
-        set_size.show = TRUE,
-        set_size.numbers_size = 6,
-        set_size.scale_max = max(colSums(pair_data)) + 500
-    )
-
-    dev.off()
-    print(paste("Saved pairwise plot to:", pair_output_file))
-}

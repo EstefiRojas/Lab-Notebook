@@ -14,19 +14,38 @@ if (!file.exists(input_file)) {
 }
 
 # Read data
+# Read data
 print(paste("Reading matrix from:", input_file))
-upset_data <- read.csv(input_file, row.names = 1)
+upset_data <- read.csv(input_file, row.names = 1, check.names = FALSE)
 
-# Clean column names (replace "_" and "." with space)
-colnames(upset_data) <- gsub("_", " ", colnames(upset_data))
-colnames(upset_data) <- gsub("\\.", " ", colnames(upset_data))
+# Clean column names (replace "_" and "." with " - ")
+colnames(upset_data) <- gsub("_", " - ", colnames(upset_data))
+colnames(upset_data) <- gsub("\\.", " - ", colnames(upset_data))
 
+# Define Desired Order
+studies <- c("Huang", "Liang", "Liu", "Montero") # Order of studies
+categories <- c("Core", "Common", "Rare", "Non-essential") # Order of categories
+
+ordered_sets <- c()
+# Iterate Categories FIRST, then Studies
+for (cat in categories) {
+    for (study in studies) {
+        set_name <- paste(study, "-", cat)
+        if (set_name %in% colnames(upset_data)) {
+            ordered_sets <- c(ordered_sets, set_name)
+        }
+    }
+}
+
+# Inverse Order as requested
+ordered_sets <- rev(ordered_sets)
 # Generate UpSet Plot
 print("Generating UpSet plot...")
 png(filename = output_file, width = 2000, height = 900, res = 150)
 
 upset(upset_data,
-    nsets = ncol(upset_data),
+    sets = ordered_sets,
+    keep.order = TRUE,
     nintersects = NA,
     order.by = "freq",
     show.numbers = "yes",

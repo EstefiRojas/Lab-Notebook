@@ -3,23 +3,11 @@ import pandas as pd
 import sys
 import os
 
-input_file = "../results/annotated_unified_genome_alignments.csv"
-output_file = "../results/annotated_unified_genome_alignments.csv"
-
-# Adjust path if running from scripts dir or root
-if not os.path.exists(input_file):
-    # Try absolute path based on user metadata or assume current dir
-    if os.path.exists("results/annotated_unified_genome_alignments.csv"):
-        input_file = "results/annotated_unified_genome_alignments.csv"
-        output_file = "results/annotated_unified_genome_alignments.csv"
-    else:
-        # Fallback to absolute path provided in context if needed, but relative is safer for portability
-        # Let's try to find it relative to script location
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        # Assuming script is in /.../scripts/
-        project_root = os.path.dirname(script_dir)
-        input_file = os.path.join(project_root, "results", "annotated_unified_genome_alignments.csv")
-        output_file = input_file
+# Determine absolute path relative to this script
+script_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(script_dir)
+input_file = os.path.join(project_root, "results", "annotated_unified_genome_alignments.csv")
+output_file = input_file
 
 print(f"Target File: {input_file}")
 

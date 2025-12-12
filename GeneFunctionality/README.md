@@ -94,7 +94,6 @@ Rscript plot_upset_essential_vs_nonessential.R
 
 **Output:** `results/plots2/`
 *   `upset_essential_vs_nonessential.png`
-*   `upset_pairwise_*.png`
 
 ## Step 9: Calculate Fisher's Exact Tests
 
