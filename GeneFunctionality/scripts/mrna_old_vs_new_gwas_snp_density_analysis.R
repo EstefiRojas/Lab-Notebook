@@ -443,7 +443,7 @@ p_count_bin <- ggplot(binary_data,
            size = 5, fontface = "bold") +
   coord_cartesian(ylim = c(0, count_ymax_bin * 1.15), clip = "off") +
   labs(
-    title = "GWAS SNP Count by Functional Probability (binary)",
+    title = "GWAS SNP Count by Functional Probability",
     x = "Functional Probability",
     y = "Transcript SNP Count"
   ) +
@@ -463,37 +463,71 @@ p_count_bin <- ggplot(binary_data,
 ggsave("../results/gwas/mrna_old_vs_new_SNP_count_boxPlot_binary.png",
        p_count_bin, width = 10, height = 8)
 
-# --- Density boxplot (binary) ---
-dens_ymax_bin <- quantile(bin_density_data$snp_density_per_kb, 0.95, na.rm = TRUE)
-p_density_bin <- ggplot(bin_density_data,
-                        aes(x = prob_binary, y = snp_density_per_kb, fill = prob_binary)) +
-  geom_boxplot(linewidth = 0.9, na.rm = TRUE, outlier.shape = NA, color = "black", staplewidth = 0.5) +
-  scale_fill_manual(values = binary_colors) +
-  scale_x_discrete(labels = binary_labels) +
-  annotate("text", x = 1.5, y = dens_ymax_bin * 1.05,
-           label = sprintf("KS = %.2f   p = %.2g", ks_bin_density$statistic, ks_bin_density$p.value),
-           size = 5, fontface = "bold") +
-  coord_cartesian(ylim = c(0, dens_ymax_bin * 1.15), clip = "off") +
-  labs(
-    title = "GWAS SNP Density by Functional Probability (binary)",
-    x = "Functional Probability",
-    y = "SNP Density (per kb)"
-  ) +
-  theme_minimal() +
-  theme(
-    plot.title = element_text(hjust = 0.5),
-    text = element_text(size = 24),
-    axis.text.x = element_text(hjust = 0.5),
-    panel.grid.major = element_line(color = "gray90"),
-    panel.grid.minor = element_blank(),
-    legend.position = "none",
-    panel.border = element_rect(colour = "black", fill = NA, linewidth = 0.3),
-    plot.background = element_rect(fill = "white", colour = NA),
-    panel.background = element_rect(fill = "white", colour = NA)
+# --- Density boxplots (binary): three versions — v7, v49, and v7+v49 pooled ---
+density_binary_specs <- list(
+  list(suffix = "_v7",  subset = "v7",     title = "GWAS SNP Density (v7)"),
+  list(suffix = "_v49", subset = "v49",    title = "GWAS SNP Density (v49)"),
+  list(suffix = "",     subset = "v7+v49", title = "GWAS SNP Density (v7+v49)")
+)
+
+for (dbs in density_binary_specs) {
+  if (dbs$subset == "v7") {
+    sub_df <- bin_density_data %>% filter(Functional == "No")
+  } else if (dbs$subset == "v49") {
+    sub_df <- bin_density_data %>% filter(Functional == "Yes")
+  } else {
+    sub_df <- bin_density_data
+  }
+
+  # Skip if a subset would be empty
+  if (nrow(sub_df) < 2) next
+
+  # KS within this subset
+  ref_d <- sub_df %>% filter(prob_binary == "[0, 0.4)")  %>% pull(snp_density_per_kb)
+  cmp_d <- sub_df %>% filter(prob_binary == "[0.4, 1.0]") %>% pull(snp_density_per_kb)
+  if (length(ref_d) >= 2 && length(cmp_d) >= 2) {
+    ks_d <- ks.test(ref_d, cmp_d)
+    ks_label <- sprintf("KS = %.2f   p = %.2g", ks_d$statistic, ks_d$p.value)
+  } else {
+    ks_label <- "n<2"
+  }
+
+  sub_legend <- sub_df %>% count(prob_binary)
+  sub_labels <- setNames(
+    paste0(sub_legend$prob_binary, "\n(n=", sub_legend$n, ")"),
+    as.character(sub_legend$prob_binary)
   )
 
-ggsave("../results/gwas/mrna_old_vs_new_SNP_density_boxPlot_binary.png",
-       p_density_bin, width = 10, height = 8)
+  dens_ymax <- quantile(sub_df$snp_density_per_kb, 0.95, na.rm = TRUE)
+
+  p <- ggplot(sub_df, aes(x = prob_binary, y = snp_density_per_kb, fill = prob_binary)) +
+    geom_boxplot(linewidth = 0.9, na.rm = TRUE, outlier.shape = NA, color = "black", staplewidth = 0.5) +
+    scale_fill_manual(values = binary_colors) +
+    scale_x_discrete(labels = sub_labels) +
+    annotate("text", x = 1.5, y = dens_ymax * 1.05, label = ks_label,
+             size = 5, fontface = "bold") +
+    coord_cartesian(ylim = c(0, dens_ymax * 1.15), clip = "off") +
+    labs(
+      title = dbs$title,
+      x = "Functional Probability",
+      y = "SNP Density (per kb)"
+    ) +
+    theme_minimal() +
+    theme(
+      plot.title = element_text(hjust = 0.5),
+      text = element_text(size = 24),
+      axis.text.x = element_text(hjust = 0.5),
+      panel.grid.major = element_line(color = "gray90"),
+      panel.grid.minor = element_blank(),
+      legend.position = "none",
+      panel.border = element_rect(colour = "black", fill = NA, linewidth = 0.3),
+      plot.background = element_rect(fill = "white", colour = NA),
+      panel.background = element_rect(fill = "white", colour = NA)
+    )
+
+  ggsave(sprintf("../results/gwas/mrna_old_vs_new_SNP_density_boxPlot_binary%s.png", dbs$suffix),
+         p, width = 10, height = 8)
+}
 
 #####################
 # SNP density vs sequence length scatter
@@ -742,3 +776,5 @@ cat("  - mrna_old_vs_new_SNP_density_boxPlot_v7.png\n")
 cat("  - mrna_old_vs_new_SNP_density_boxPlot_v49.png\n")
 cat("  - mrna_old_vs_new_SNP_count_boxPlot_binary.png\n")
 cat("  - mrna_old_vs_new_SNP_density_boxPlot_binary.png\n")
+cat("  - mrna_old_vs_new_SNP_density_boxPlot_binary_v7.png\n")
+cat("  - mrna_old_vs_new_SNP_density_boxPlot_binary_v49.png\n")
